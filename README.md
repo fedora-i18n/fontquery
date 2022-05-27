@@ -1,8 +1,8 @@
-= Fontquery
+# Fontquery
 
 fontquery is a tool to query fonts in the certain Fedora release.
 
-== Usage
+## Usage
 
 ```
 usage: fontquery [-h] [-r RELEASE] [-m {fcmatch,fclist}] [-v] [args ...]
