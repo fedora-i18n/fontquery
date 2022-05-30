@@ -50,7 +50,7 @@ if __name__ == '__main__':
         print('podman is not installed')
         sys.exit(1)
 
-    cmdline = ['podman', 'run', '--rm', 'fedora-fontquery:{}'.format(args.release), '-m', args.mode] + (['-v'] if args.verbose else []) + args.args
+    cmdline = ['podman', 'run', '--rm', 'ghcr.io/fedora-i18n/fontquery:{}'.format(args.release), '-m', args.mode] + (['-v'] if args.verbose else []) + args.args
 
     if args.verbose:
         print('# '+' '.join(cmdline))
