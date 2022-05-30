@@ -36,6 +36,12 @@ if __name__ == '__main__':
     parser.add_argument('-r', '--release',
                         default='rawhide',
                         help='Release number')
+    parser.add_argument('-p', '--push',
+                        action='store_true',
+                        help='Push image')
+    parser.add_argument('-s', '--skip-build',
+                        action='store_true',
+                        help='Do not build image')
     parser.add_argument('-v', '--verbose',
                         action='store_true',
                         help='Show more detailed logs')
@@ -50,7 +56,14 @@ if __name__ == '__main__':
         print('buildah is not installed')
         sys.exit(1)
 
-    cmdline = ['buildah', 'build', '-f', 'Dockerfile', '--build-arg', 'release={}'.format(args.release), '-t', 'fedora-fontquery:{}'.format(args.release)]
+    cmdline = ['buildah', 'build', '-f', 'Dockerfile', '--build-arg', 'release={}'.format(args.release), '-t', 'ghcr.io/fedora-i18n/fontquery:{}'.format(args.release)]
     if args.verbose:
         print('# '+' '.join(cmdline))
-    subprocess.run(cmdline)
+    if not args.skip_build:
+        subprocess.run(cmdline)
+
+    cmdline = ['buildah', 'push', 'ghcr.io/fedora-i18n/fontquery:{}'.format(args.release)]
+    if args.verbose:
+        print('# '+' '.join(cmdline))
+    if args.push:
+        subprocess.run(cmdline)
