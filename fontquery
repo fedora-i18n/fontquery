@@ -38,6 +38,10 @@ if __name__ == '__main__':
                         default='fcmatch',
                         choices=['fcmatch', 'fclist'],
                         help='Action to perform for query')
+    parser.add_argument('-t', '--target',
+                        default='langpacks',
+                        choices=['comps', 'langpacks'],
+                        help='Query fonts from')
     parser.add_argument('-v', '--verbose',
                         action='store_true',
                         help='Show more detailed logs')
@@ -50,7 +54,7 @@ if __name__ == '__main__':
         print('podman is not installed')
         sys.exit(1)
 
-    cmdline = ['podman', 'run', '--rm', 'ghcr.io/fedora-i18n/fontquery:{}'.format(args.release), '-m', args.mode] + (['-v'] if args.verbose else []) + args.args
+    cmdline = ['podman', 'run', '--rm', 'ghcr.io/fedora-i18n/fontquery-{}:{}'.format(args.target, args.release), '-m', args.mode] + (['-v'] if args.verbose else []) + args.args
 
     if args.verbose:
         print('# '+' '.join(cmdline))

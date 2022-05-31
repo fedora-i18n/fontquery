@@ -29,6 +29,18 @@ import argparse
 import subprocess
 import shutil
 
+def build(target):
+    cmdline = ['buildah', 'build', '-f', 'Dockerfile', '--build-arg', 'release={}'.format(args.release), '--target', target, '-t', 'ghcr.io/fedora-i18n/fontquery-{}:{}'.format(target, args.release), '.']
+    if args.verbose:
+        print('# '+' '.join(cmdline))
+    subprocess.run(cmdline)
+
+def push(target):
+    cmdline = ['buildah', 'push', 'ghcr.io/fedora-i18n/fontquery-{}:{}'.format(target, args.release)]
+    if args.verbose:
+        print('# '+' '.join(cmdline))
+    subprocess.run(cmdline)
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Build fontquery image',
@@ -42,6 +54,9 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--skip-build',
                         action='store_true',
                         help='Do not build image')
+    parser.add_argument('-t', '--target',
+                        choices=['comps', 'langpacks'],
+                        help='Take an action for the specific target only')
     parser.add_argument('-v', '--verbose',
                         action='store_true',
                         help='Show more detailed logs')
@@ -56,14 +71,16 @@ if __name__ == '__main__':
         print('buildah is not installed')
         sys.exit(1)
 
-    cmdline = ['buildah', 'build', '-f', 'Dockerfile', '--build-arg', 'release={}'.format(args.release), '-t', 'ghcr.io/fedora-i18n/fontquery:{}'.format(args.release)]
-    if args.verbose:
-        print('# '+' '.join(cmdline))
-    if not args.skip_build:
-        subprocess.run(cmdline)
-
-    cmdline = ['buildah', 'push', 'ghcr.io/fedora-i18n/fontquery:{}'.format(args.release)]
-    if args.verbose:
-        print('# '+' '.join(cmdline))
-    if args.push:
-        subprocess.run(cmdline)
+    if args.target:
+        if not args.skip_build:
+            build(args.target)
+        if args.push:
+            push(args.target)
+    else:
+        target = ['comps', 'langpacks']
+        if not args.skip_build:
+            for t in target:
+                build(t)
+        if args.push:
+            for t in target:
+                push(t)
