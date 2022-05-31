@@ -1,4 +1,6 @@
 # Fontquery
+[![tag badge](https://img.shields.io/github/v/tag/fedora-i18n/fontquery)](https://github.com/fedora-i18n/fontquery/tags)
+[![license badge](https://img.shields.io/github/license/fedora-i18n/fontquery)](./LICENSE)
 
 fontquery is a tool to query fonts in the certain Fedora release.
 
