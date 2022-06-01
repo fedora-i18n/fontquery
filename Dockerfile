@@ -15,13 +15,34 @@ ENTRYPOINT ["/fontquery"]
 # comps image
 #
 FROM base AS comps
-
+# LABEL
+LABEL description="Working environment for fontquery - comps"
+# Install
 RUN echo "Installing fonts packages"; dnf -y install @fonts && dnf -y clean all
 
 #
 # langpacks image
 #
 FROM base AS langpacks
-
+# LABEL
+LABEL description="Working environment for fontquery - langpacks"
 # Install
 RUN echo "Installing langpacks packages"; dnf -y install langpacks* && dnf -y clean all
+
+#
+# both (comps + langpacks)
+#
+FROM comps AS both
+# LABEL
+LABEL description="Working environment for fontquery - comps + langpacks"
+# Install
+RUN echo "Installing langpacks packages"; dnf -y install langpacks* && dnf -y clean all
+
+#
+# all
+#
+FROM both AS all
+# LABEL
+LABEL description="Working environment for fontquery - All fonts packages"
+# Install
+RUN echo "Installing all fonts packages"; dnf -y install --skip-broken *-fonts && dnf -y clean all

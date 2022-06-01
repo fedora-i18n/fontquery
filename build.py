@@ -55,7 +55,7 @@ if __name__ == '__main__':
                         action='store_true',
                         help='Do not build image')
     parser.add_argument('-t', '--target',
-                        choices=['comps', 'langpacks'],
+                        choices=['comps', 'langpacks', 'both', 'all'],
                         help='Take an action for the specific target only')
     parser.add_argument('-v', '--verbose',
                         action='store_true',
@@ -77,7 +77,7 @@ if __name__ == '__main__':
         if args.push:
             push(args.target)
     else:
-        target = ['comps', 'langpacks']
+        target = ['comps', 'langpacks', 'both', 'all']
         if not args.skip_build:
             for t in target:
                 build(t)
