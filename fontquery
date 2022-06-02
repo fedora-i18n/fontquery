@@ -40,7 +40,7 @@ if __name__ == '__main__':
                         help='Action to perform for query')
     parser.add_argument('-t', '--target',
                         default='langpacks',
-                        choices=['comps', 'langpacks'],
+                        choices=['comps', 'langpacks', 'both', 'all'],
                         help='Query fonts from')
     parser.add_argument('-v', '--verbose',
                         action='store_true',
