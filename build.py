@@ -29,17 +29,26 @@ import argparse
 import subprocess
 import shutil
 
-def build(target):
-    cmdline = ['buildah', 'build', '-f', 'Dockerfile', '--build-arg', 'release={}'.format(args.release), '--target', target, '-t', 'ghcr.io/fedora-i18n/fontquery-{}:{}'.format(target, args.release), '.']
-    if args.verbose:
+def build(target, params = None):
+    cmdline = ['buildah', 'build', '-f', 'Dockerfile', '--build-arg', 'release={}'.format(params.release), '--target', target, '-t', 'ghcr.io/fedora-i18n/fontquery-{}:{}'.format(target, params.release), '.']
+    if params.verbose:
         print('# '+' '.join(cmdline))
-    subprocess.run(cmdline)
+    if not params.try_run:
+        subprocess.run(cmdline)
 
-def push(target):
-    cmdline = ['buildah', 'push', 'ghcr.io/fedora-i18n/fontquery-{}:{}'.format(target, args.release)]
-    if args.verbose:
+def push(target, params = None):
+    cmdline = ['buildah', 'push', 'ghcr.io/fedora-i18n/fontquery-{}:{}'.format(target, params.release)]
+    if params.verbose:
         print('# '+' '.join(cmdline))
-    subprocess.run(cmdline)
+    if not params.try_run:
+        subprocess.run(cmdline)
+
+def clean(target, params = None):
+    cmdline = ['buildah', 'rmi', 'ghcr.io/fedora-i18n/fontquery-{}:{}'.format(target, params.release)]
+    if params.verbose:
+        print('# '+' '.join(cmdline))
+    if not params.try_run:
+        subprocess.run(cmdline)
 
 if __name__ == '__main__':
 
@@ -48,6 +57,9 @@ if __name__ == '__main__':
     parser.add_argument('-r', '--release',
                         default='rawhide',
                         help='Release number')
+    parser.add_argument('--rmi',
+                        action='store_true',
+                        help='Remove image before building')
     parser.add_argument('-p', '--push',
                         action='store_true',
                         help='Push image')
@@ -57,6 +69,9 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--target',
                         choices=['comps', 'langpacks', 'both', 'all'],
                         help='Take an action for the specific target only')
+    parser.add_argument('--try-run',
+                        action='store_true',
+                        help='Do not take any actions')
     parser.add_argument('-v', '--verbose',
                         action='store_true',
                         help='Show more detailed logs')
@@ -73,14 +88,18 @@ if __name__ == '__main__':
 
     if args.target:
         if not args.skip_build:
-            build(args.target)
+            if args.rmi:
+                clean(args.target, args)
+            build(args.target, args)
         if args.push:
-            push(args.target)
+            push(args.target, args)
     else:
         target = ['comps', 'langpacks', 'both', 'all']
         if not args.skip_build:
             for t in target:
-                build(t)
+                if args.rmi:
+                    clean(t, args)
+                build(t, args)
         if args.push:
             for t in target:
-                push(t)
+                push(t, args)
