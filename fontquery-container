@@ -41,7 +41,7 @@ def dump(params):
     jsons = []
     for l in params.lang:
         for f in params.family:
-            cmdline = ['fc-match', '-f', '{},{},{},'.format(l, langname[l], f)+'%{file:-<unknown filename|basename},%{family[0]:-<unknown family>},%{style[0]:-<unknown style>}\\n', '{}:lang={}'.format(f, l)]
+            cmdline = ['fc-match', '-f', '%{file:-<unknown filename|basename},%{family[0]:-<unknown family>},%{style[0]:-<unknown style>}\\n', '{}:lang={}'.format(f, l)]
             if params.verbose:
                 print('# '+' '.join(cmdline), flush=True, file=sys.stderr)
             retval = subprocess.run(cmdline, capture_output=True)
@@ -49,7 +49,7 @@ def dump(params):
             cond_empty = re.compile(r'^$')
             out = [s for s in retval.stdout.decode('utf-8').split('\n') if not cond_empty.match(s)]
             data = [item.split(',') for item in out][0]
-            jsons.append({'lang': data[0], 'lang_name': data[1], 'alias': data[2], 'file': data[3], 'family': data[4], 'style': data[5]})
+            jsons.append({'pattern': params.pattern, 'lang': l, 'lang_name': langname[l], 'alias': f, 'file': data[0], 'family': data[1], 'style': data[2]})
 
     print(json.dumps(jsons, sort_keys=True, indent=4))
 
@@ -87,6 +87,8 @@ if __name__ == '__main__':
                         default='fcmatch',
                         choices=list(fccmd.keys()),
                         help='Action to perform for query')
+    parser.add_argument('-p', '--pattern',
+                        help='Query pattern to identify fonts data into JSON')
     parser.add_argument('-v', '--verbose',
                         action='store_true',
                         help='Show more detailed logs')
