@@ -3,8 +3,11 @@ FROM fedora:${release} AS base
 # LABEL
 
 # Install
+RUN echo "Removing macros.image-language-conf if any"; rm -f /etc/rpm/macros.image-language-conf
 RUN echo "Updating all base packages"; dnf -y update
-RUN echo "Installing fontconfig"; dnf -y install fontconfig && dnf -y clean all
+RUN echo "Installing fontconfig"; dnf -y install fontconfig
+RUN echo "Installing anaconda-core"; dnf -y install anaconda-core
+RUN echo "Cleaning up dnf cache"; dnf -y clean all
 
 COPY fontquery-container /fontquery
 
@@ -45,4 +48,4 @@ FROM both AS all
 # LABEL
 LABEL description="Working environment for fontquery - All fonts packages"
 # Install
-RUN echo "Installing all fonts packages"; dnf -y install --skip-broken *-fonts && dnf -y clean all
+RUN echo "Installing all fonts packages"; dnf -y install --skip-broken -x bicon-fonts -x root-fonts -x wine*-fonts -x php-tcpdf*-fonts -x texlive*-fonts -x mathgl-fonts -x python*-matplotlib-data-fonts *-fonts && dnf -y clean all
