@@ -51,7 +51,7 @@ def dump(params):
             data = [item.split(',') for item in out][0]
             jsons.append({'pattern': params.pattern, 'lang': l, 'lang_name': langname[l], 'alias': f, 'file': data[0], 'family': data[1], 'style': data[2]})
 
-    print(json.dumps(jsons, sort_keys=True, indent=4))
+    print(json.dumps(jsons, indent=4))
 
 if __name__ == '__main__':
 
