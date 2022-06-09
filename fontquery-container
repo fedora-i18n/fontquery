@@ -27,6 +27,7 @@ import sys
 import argparse
 import json
 import langtable
+import os
 import re
 import shutil
 import subprocess
@@ -34,11 +35,20 @@ import types
 from pyanaconda import localization
 
 def dump(params):
+    osversion = os.environ['RELEASE']
+
     langname = {lang: langtable.language_name(languageId = re.sub(r'_([a-zA-Z]*)$', lambda r: r.group(0).upper(), lang.replace('-','_')), languageIdQuery = 'en') for lang in params.lang}
+    with open('./version.txt', 'r') as f:
+        fqver = f.readline().strip()
     if not shutil.which('fc-match'):
         print('{} is not installed'.format(fccmd[args.mode]), file=sys.stderr)
         sys.exit(1)
-    jsons = []
+    jsons = {
+        'osrelease': osversion,
+        'pattern': params.pattern,
+        'version': fqver,
+        'fonts': [],
+    }
     for l in params.lang:
         for f in params.family:
             cmdline = ['fc-match', '-f', '%{file:-<unknown filename|basename},%{family[0]:-<unknown family>},%{style[0]:-<unknown style>}\\n', '{}:lang={}'.format(f, l)]
@@ -49,7 +59,7 @@ def dump(params):
             cond_empty = re.compile(r'^$')
             out = [s for s in retval.stdout.decode('utf-8').split('\n') if not cond_empty.match(s)]
             data = [item.split(',') for item in out][0]
-            jsons.append({'pattern': params.pattern, 'lang': l, 'lang_name': langname[l], 'alias': f, 'file': data[0], 'family': data[1], 'style': data[2]})
+            jsons['fonts'].append({'lang': l, 'lang_name': langname[l], 'alias': f, 'file': data[0], 'family': data[1], 'style': data[2]})
 
     print(json.dumps(jsons, indent=4))
 

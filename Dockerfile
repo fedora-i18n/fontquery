@@ -10,11 +10,15 @@ RUN echo "Installing anaconda-core"; dnf -y install anaconda-core
 RUN echo "Cleaning up dnf cache"; dnf -y clean all
 
 COPY fontquery-container /fontquery
+COPY version.txt /version.txt
 
 #
 # comps image
 #
 FROM base AS comps
+ARG release
+ENV RELEASE ${release}
+
 # LABEL
 LABEL description="Working environment for fontquery - comps"
 # Install
@@ -27,6 +31,9 @@ ENTRYPOINT ["/fontquery", "--pattern", "comps"]
 # langpacks image
 #
 FROM base AS langpacks
+ARG release
+ENV RELEASE ${release}
+
 # LABEL
 LABEL description="Working environment for fontquery - langpacks"
 # Install
@@ -39,6 +46,9 @@ ENTRYPOINT ["/fontquery", "--pattern", "langpacks"]
 # both (comps + langpacks)
 #
 FROM comps AS both
+ARG release
+ENV RELEASE ${release}
+
 # LABEL
 LABEL description="Working environment for fontquery - comps + langpacks"
 # Install
@@ -51,6 +61,9 @@ ENTRYPOINT ["/fontquery", "--pattern", "both"]
 # all
 #
 FROM both AS all
+ARG release
+ENV RELEASE ${release}
+
 # LABEL
 LABEL description="Working environment for fontquery - All fonts packages"
 # Install
