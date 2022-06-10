@@ -30,43 +30,53 @@ import markdown
 import os
 import re
 import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'cell_row_span')))
+from cell_row_span import *
 
-if __name__ == '__main__':
+def json2data(data):
+    retval = {}
+    for d in data['fonts']:
+        key = d['lang_name']
+        if not key in retval:
+            retval[key] = {}
+        alias = d['alias']
+        if not alias in retval[key]:
+            retval[key][alias] = {}
+        retval[key][alias] = d
 
-    parser = argparse.ArgumentParser(description='HTML formatter for fontquery',
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    return retval
 
-    parser.add_argument('-o', '--output',
-                        type=argparse.FileType('w'),
-                        default='-',
-                        help='Output file')
-    parser.add_argument('-t', '--title',
-                        help='Set title name')
-    parser.add_argument('FILE',
-                        type=argparse.FileType('r'),
-                        help='JSON file to read or - to read from stdin')
+def json2langgroup(data):
+    retval = {}
+    for k, v in data.items():
+        key = '{}|{}|{}'.format(v['sans-serif']['family'], v['serif']['family'], v['monospace']['family'])
+        if not key in retval:
+            retval[key] = {}
+        retval[key][k] = v
 
-    args = parser.parse_args()
-    atexit.register(args.FILE.close)
+    return retval
 
-    data = None
-    with args.FILE:
-        data = json.load(args.FILE)
+def json2langgroupdiff(data, diffdata):
+    retval = {}
+    aliases = [ 'sans-serif', 'serif', 'monospace' ]
+    for k, v in data.items():
+        key = ''
+        for a in aliases:
+            key += '|{}'.format(v[a]['family'])
+        for a in aliases:
+            key += '|{}'.format(diffdata[k][a]['family'])
+        if not key in retval:
+            retval[key] = {}
+        retval[key][k] = [v, diffdata[k]]
 
+    return retval
+
+def output_table(out, title, data):
+    sorteddata = json2data(data)
     md = [
         'Language | default sans | default serif | default mono',
         '-------- | ------------ | ------------- | ------------',
     ]
-    sorteddata = {}
-    for d in data['fonts']:
-        key = d['lang_name']
-        if not key in sorteddata:
-            sorteddata[key] = {}
-        alias = d['alias']
-        if not alias in sorteddata[key]:
-            sorteddata[key][alias] = {}
-        sorteddata[key][alias] = d
-
     for k in sorted(sorteddata.keys()):
         aliases = {
             'sans-serif': 'sans',
@@ -83,7 +93,7 @@ if __name__ == '__main__':
 
         md.append(s)
 
-    with args.output:
+    with out:
         header = [
             '<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">',
             '<html>',
@@ -121,7 +131,134 @@ if __name__ == '__main__':
             '</body>',
             '</html>'
         ]
-        args.output.write('\n'.join(header) % {'title': args.title})
-        args.output.write(markdown.markdown('\n'.join(md), extensions=['tables', 'attr_list']))
-        args.output.write('\n'.join(footer) % {'progname': os.path.basename(__file__),
-                                               'image': data['pattern']})
+        out.write('\n'.join(header) % {'title': title})
+        out.write(markdown.markdown('\n'.join(md), extensions=['tables', 'attr_list']))
+        out.write('\n'.join(footer) % {'progname': os.path.basename(__file__),
+                                       'image': data['pattern']})
+
+def output_diff(out, title, data, diffdata):
+    sorteddata = json2data(data)
+    sorteddiffdata = json2data(diffdata)
+    matched = {}
+    notmatched = {}
+    for k in sorted(sorteddata.keys()):
+        if sorteddata[k] == sorteddiffdata[k]:
+            matched[k] = sorteddata[k]
+        else:
+            notmatched[k] = sorteddata[k]
+    langdata = json2langgroup(matched)
+
+    md = [
+        'Language |   | default sans | default serif | default mono',
+        '-------- | - | ------------ | ------------- | ------------',
+    ]
+    aliases = [ 'sans-serif', 'serif', 'monospace' ]
+    for k in sorted(langdata.keys()):
+        lang = ','.join(['{}({})'.format(l, langdata[k][l]['sans-serif']['lang']) for l in langdata[k].keys()])
+        s = '{} {{ .lang }} | '.format(lang)
+        kk = list(langdata[k].keys())[0]
+        for a in aliases:
+            s += '| {}'.format(langdata[k][kk][a]['family'])
+
+        md.append(s)
+
+    langdiffdata = json2langgroupdiff(notmatched, sorteddiffdata)
+
+    for k in langdiffdata.keys():
+        lang = ','.join(['{}({})'.format(l, langdiffdata[k][l][0]['sans-serif']['lang']) for l in langdiffdata[k].keys()])
+        s = '{} {{ .lang }} | - {{ .original .symbol }} '.format(lang)
+        diff = []
+        kk = list(langdiffdata[k].keys())[0]
+        vv = langdiffdata[k][kk]
+        for a in aliases:
+            if vv[0][a]['family'] == vv[1][a]['family']:
+                diff.append(None)
+                attr = ''
+            else:
+                diff.append(vv[1][a])
+                attr = '{ .original }'
+            s += '| {} {}'.format(vv[0][a]['family'], attr)
+        md.append(s)
+        s = '_^ _| + { .diff .symbol } '
+        for x in diff:
+            if x is None:
+                s += '|_^ _'
+            else:
+                s += '| {} {{ .diff }}'.format(x['family'])
+        md.append(s)
+
+    with out:
+        header = [
+            '<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">',
+            '<html>',
+            '<head><title>Fonts table for %(title)s</title><style type=\"text/css\">',
+            'table {',
+            '  border-collapse: collapse;',
+            '}',
+            'table, th, td {',
+            '  border-style: solid;',
+            '  border-width: 1px;',
+            '  border-color: #000000;',
+            '}',
+            '.lang {',
+            '  word-break: break-all;',
+            '  width: 40%%;',
+            '}',
+            '.symbol {',
+            '  min-width: 10px;',
+            '  width: 1%%',
+            '}',
+            '.original {',
+            '  color: green',
+            '}',
+            '.diff {',
+            '  color: red',
+            '}',
+            '</style></head>',
+            '<body>',
+        ]
+        header.append('<div name="note" style="font-size: 10px; color: gray;">Note: No symbols at 2nd column means no difference. -/+ symbols means there are difference between {} and {}</div>'.format(data['pattern'], diffdata['pattern']))
+        header.append('<div name="note" style="font-size: 10px; color: gray;">Legend: + ({}), - ({})</div>'.format(data['pattern'], diffdata['pattern']))
+        footer = [
+            '</table>',
+            '<div name=\"footer\" style=\"text-align:right;float:right;font-size:10px;color:gray;\">Generated by fontquery(%(image)s image) + %(progname)s</div>',
+            '</body>',
+            '</html>'
+        ]
+        out.write('\n'.join(header) % {'title': title})
+        out.write(markdown.markdown('\n'.join(md), extensions=['tables', 'attr_list', 'cell_row_span']))
+        out.write('\n'.join(footer) % {'progname': os.path.basename(__file__),
+                                       'image': data['pattern']})
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(description='HTML formatter for fontquery',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    parser.add_argument('-o', '--output',
+                        type=argparse.FileType('w'),
+                        default='-',
+                        help='Output file')
+    parser.add_argument('-t', '--title',
+                        help='Set title name')
+    parser.add_argument('-d', '--diff',
+                        type=argparse.FileType('r'),
+                        help='Output difference between FILE and DIFF as secondary')
+    parser.add_argument('FILE',
+                        type=argparse.FileType('r'),
+                        help='JSON file to read or - to read from stdin')
+
+    args = parser.parse_args()
+    atexit.register(args.FILE.close)
+
+    data = None
+    with args.FILE:
+        data = json.load(args.FILE)
+
+    if args.diff is None:
+        output_table(args.output, args.title, data)
+    else:
+        with args.diff:
+            diffdata = json.load(args.diff)
+
+        output_diff(args.output, args.title, data, diffdata)
