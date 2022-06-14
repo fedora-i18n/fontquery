@@ -141,11 +141,18 @@ def output_diff(out, title, data, diffdata):
     sorteddiffdata = json2data(diffdata)
     matched = {}
     notmatched = {}
+    missing_b = {}
     for k in sorted(sorteddata.keys()):
-        if sorteddata[k] == sorteddiffdata[k]:
-            matched[k] = sorteddata[k]
+        if not k in sorteddiffdata:
+            missing_b[k] = sorteddata[k]
         else:
-            notmatched[k] = sorteddata[k]
+            if sorteddata[k] == sorteddiffdata[k]:
+                matched[k] = sorteddata[k]
+            else:
+                notmatched[k] = sorteddata[k]
+    missing_a = {}
+    for k in sorted(list(set(sorteddiffdata.keys()) - set(sorteddata.keys()))):
+        missing_a[k] = sorteddiffdata[k]
     langdata = json2langgroup(matched)
 
     md = [
@@ -160,6 +167,23 @@ def output_diff(out, title, data, diffdata):
         for a in aliases:
             s += '| {}'.format(langdata[k][kk][a]['family'])
 
+        md.append(s)
+
+    for k in sorted(missing_b.keys()):
+        s = '{}({}) {{ .lang }} | - {{ .original .symbol }} '.format(k, missing_b[k]['sans-serif']['lang'])
+        for a in aliases:
+            s += '| {} {{ .original }} '.format(missing_b[k][a]['family'])
+
+        md.append(s)
+        s = '_^ _| + { .diff .symbol } | N/A { .diff } | N/A { .diff } | N/A { .diff } '
+        md.append(s)
+
+    for k in sorted(missing_a.keys()):
+        s = '{}({}) {{ .lang }} | - {{ .original .symbol }} | N/A {{ .original }} | N/A {{ .original }} | N/A {{ .original }} '.format(k, missing_a[k]['sans-serif']['lang'])
+        md.append(s)
+        s = '_^ _| + { .diff .symbol } '
+        for a in aliases:
+            s += '| {} {{ .diff }}'.format(missing_a[k][a]['family'])
         md.append(s)
 
     langdiffdata = json2langgroupdiff(notmatched, sorteddiffdata)
