@@ -23,11 +23,17 @@
 # PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 
 import argparse
+import os
 import re
 import shutil
 import subprocess
 import sys
-from pyfontquery import container
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)))
+try:
+    from pyfontquery import container
+    local_not_supported = False
+except ModuleNotFoundError:
+    local_not_supported = True
 
 def main():
     parser = argparse.ArgumentParser(description='Query fonts',
@@ -56,6 +62,8 @@ def main():
 
     args = parser.parse_args()
     if args.release == 'local':
+        if local_not_supported:
+            raise TypeError('local query feature is not available.')
         cmdline = ['fontquery-container', '-m', args.mode] + (['-'+''.join(['v'*(args.verbose-1)])] if args.verbose > 1 else []) + ([] if args.lang is None else [' '.join(['-l '+l for l in args.lang])]) + args.args
     else:
         if not shutil.which('podman'):
@@ -70,3 +78,6 @@ def main():
     retval = subprocess.run(cmdline, stdout=subprocess.PIPE)
 
     print(retval.stdout.decode('utf-8'))
+
+if __name__ == '__main__':
+    main()

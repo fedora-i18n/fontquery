@@ -101,3 +101,6 @@ def main():
         if args.push:
             for t in target:
                 push(t, args)
+
+if __name__ == '__main__':
+    main()
