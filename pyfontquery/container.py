@@ -1,5 +1,4 @@
-#! /usr/bin/python3
-# fontquery-container
+# container.py
 # Copyright (C) 2022 Red Hat, Inc.
 #
 # Authors:
@@ -23,30 +22,38 @@
 # ON AN "AS IS" BASIS, AND THE COPYRIGHT HOLDER HAS NO OBLIGATION TO
 # PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 
-import sys
 import argparse
+import csv
 import json
 import langtable
-import os
 import re
 import shutil
 import subprocess
+import sys
 import types
-from pyanaconda import localization
+from pathlib import Path
+from pyfontquery import version
+try:
+    from pyanaconda import localization
+    defaultLangList = [lang for lang in localization.get_available_translations()]
+except ModuleNotFoundError:
+    defaultLangList = [ 'aa', 'ab', 'af', 'ak', 'am', 'an', 'ar', 'as', 'ast', 'av', 'ay', 'az_az', 'az_ir', 'ba', 'be', 'ber_dz', 'ber_ma', 'bg', 'bh', 'bho', 'bi', 'bin', 'bm', 'bn', 'bo', 'br', 'brx', 'bs', 'bua', 'byn', 'ca', 'ce', 'ch', 'chm', 'chr', 'co', 'crh', 'cs', 'csb', 'cu', 'cv', 'cy', 'da', 'de', 'doi', 'dv', 'dz', 'ee', 'el', 'en', 'eo', 'es', 'et', 'eu', 'fa', 'fat', 'ff', 'fi', 'fil', 'fj', 'fo', 'fr', 'fur', 'fy', 'ga', 'gd', 'gez', 'gl', 'gn', 'gu', 'gv', 'ha', 'haw', 'he', 'hi', 'hne', 'ho', 'hr', 'hsb', 'ht', 'hu', 'hy', 'hz', 'ia', 'id', 'ie', 'ig', 'ii', 'ik', 'io', 'is', 'it', 'iu', 'ja', 'jv', 'ka', 'kaa', 'kab', 'ki', 'kj', 'kk', 'kl', 'km', 'kn', 'ko', 'kok', 'kr', 'ks', 'ku_am', 'ku_iq', 'ku_ir', 'ku_tr', 'kum', 'kv', 'kw', 'kwm', 'ky', 'la', 'lah', 'lb', 'lez', 'lg', 'li', 'ln', 'lo', 'lt', 'lv', 'mai', 'mg', 'mh', 'mi', 'mk', 'ml', 'mn_cn', 'mn_mn', 'mni', 'mo', 'mr', 'ms', 'mt', 'my', 'na', 'nb', 'nds', 'ne', 'ng', 'nl', 'nn', 'no', 'nqo', 'nr', 'nso', 'nv', 'ny', 'oc', 'om', 'or', 'os', 'ota', 'pa', 'pa_pk', 'pap_an', 'pap_aw', 'pes', 'pl', 'prs', 'ps_af', 'ps_pk', 'pt', 'qu', 'quz', 'rm', 'rn', 'ro', 'ru', 'rw', 'sa', 'sah', 'sat', 'sc', 'sco', 'sd', 'se', 'sel', 'sg', 'sh', 'shs', 'si', 'sid', 'sk', 'sl', 'sm', 'sma', 'smj', 'smn', 'sms', 'sn', 'so', 'sq', 'sr', 'ss', 'st', 'su', 'sv', 'sw', 'syr', 'ta', 'te', 'tg', 'th', 'ti_er', 'ti_et', 'tig', 'tk', 'tl', 'tn', 'to', 'tr', 'ts', 'tt', 'tw', 'ty', 'tyv', 'ug', 'uk', 'und_zmth', 'und_zsye', 'ur', 'uz', 've', 'vi', 'vo', 'vot', 'wa', 'wal', 'wen', 'wo', 'xh', 'yap', 'yi', 'yo', 'za', 'zh_cn', 'zh_hk', 'zh_mo', 'zh_sg', 'zh_tw', 'zu' ]
 
 def dump(params):
-    osversion = os.environ['RELEASE']
-
+    p = Path('/etc/os-release')
+    with open(p) as f:
+        reader = csv.reader(f, delimiter='=')
+        os_release = dict(reader)
     langname = {lang: langtable.language_name(languageId = re.sub(r'_([a-zA-Z]*)$', lambda r: r.group(0).upper(), lang.replace('-','_')), languageIdQuery = 'en') for lang in params.lang}
-    with open('./version.txt', 'r') as f:
-        fqver = f.readline().strip()
+    fqver = version.fontquery_version()
     if not shutil.which('fc-match'):
         print('{} is not installed'.format(fccmd[args.mode]), file=sys.stderr)
         sys.exit(1)
     jsons = {
-        'osrelease': osversion,
+        'id': os_release['ID'],
+        'version_id': os_release['VERSION_ID'],
         'pattern': params.pattern,
-        'version': fqver,
+        'fq_id': fqver,
         'fonts': [],
     }
     for l in params.lang:
@@ -61,18 +68,16 @@ def dump(params):
             data = [item.split(',') for item in out][0]
             jsons['fonts'].append({'lang': l, 'lang_name': langname[l], 'alias': f, 'file': data[0], 'family': data[1], 'style': data[2]})
 
-    print(json.dumps(jsons, indent=4))
+    return json.dumps(jsons, indent=4)
 
-if __name__ == '__main__':
-
+def main():
     fccmd = {'fcmatch': 'fc-match',
              'fclist': 'fc-list',
              'json': dump}
     fclang_ll_cc = ['az_az', 'az_ir', 'ber_dz', 'ber_ma', 'ku_am', 'ku_iq', 'ku_ir', 'ku_tr', 'mn_cn', 'mn_mn', 'pa_pk', 'pap_an', 'pap_aw', 'ps_af', 'ps_pk', 'ti_er', 'ti_et', 'und_zmth', 'und_zsye', 'zh_cn', 'zh_hk', 'zh_mo', 'zh_sg', 'zh_tw']
-    defaultLangs = [lang for lang in localization.get_available_translations()]
     families = ['sans-serif', 'serif', 'monospace']
     fclangs = []
-    for lang in defaultLangs:
+    for lang in defaultLangList:
         added = False
         for l in fclang_ll_cc:
             ll = re.sub('_.*', '', l)
@@ -109,7 +114,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if isinstance(fccmd[args.mode], types.FunctionType):
-        fccmd[args.mode](args)
+        print(fccmd[args.mode](args))
     else:
         if not shutil.which(fccmd[args.mode]):
             print('{} is not installed'.format(fccmd[args.mode]), file=sys.stderr)

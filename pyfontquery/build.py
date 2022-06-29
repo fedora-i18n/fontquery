@@ -1,4 +1,3 @@
-#! /usr/bin/python3
 # build.py
 # Copyright (C) 2022 Red Hat, Inc.
 #
@@ -50,8 +49,7 @@ def clean(target, params = None):
     if not params.try_run:
         subprocess.run(cmdline)
 
-if __name__ == '__main__':
-
+def main():
     parser = argparse.ArgumentParser(description='Build fontquery image',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-r', '--release',

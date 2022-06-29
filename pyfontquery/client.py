@@ -1,4 +1,4 @@
-#! /usr/bin/python3
+# client.py
 # Copyright (C) 2022 Red Hat, Inc.
 #
 # Authors:
@@ -22,14 +22,14 @@
 # ON AN "AS IS" BASIS, AND THE COPYRIGHT HOLDER HAS NO OBLIGATION TO
 # PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 
-import sys
 import argparse
 import re
 import shutil
 import subprocess
+import sys
+from pyfontquery import container
 
-if __name__ == '__main__':
-
+def main():
     parser = argparse.ArgumentParser(description='Query fonts',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-r', '--release',
@@ -55,11 +55,14 @@ if __name__ == '__main__':
                         help='Queries')
 
     args = parser.parse_args()
-    if not shutil.which('podman'):
-        print('podman is not installed')
-        sys.exit(1)
+    if args.release == 'local':
+        cmdline = ['fontquery-container', '-m', args.mode] + (['-'+''.join(['v'*(args.verbose-1)])] if args.verbose > 1 else []) + ([] if args.lang is None else [' '.join(['-l '+l for l in args.lang])]) + args.args
+    else:
+        if not shutil.which('podman'):
+            print('podman is not installed')
+            sys.exit(1)
 
-    cmdline = ['podman', 'run', '--rm', 'ghcr.io/fedora-i18n/fontquery-{}:{}'.format(args.target, args.release), '-m', args.mode] + (['-'+''.join(['v'*(args.verbose-1)])] if args.verbose > 1 else []) + ([] if args.lang is None else [' '.join(['-l '+l for l in args.lang])]) + args.args
+        cmdline = ['podman', 'run', '--rm', 'ghcr.io/fedora-i18n/fontquery-{}:{}'.format(args.target, args.release), '-m', args.mode] + (['-'+''.join(['v'*(args.verbose-1)])] if args.verbose > 1 else []) + ([] if args.lang is None else [' '.join(['-l '+l for l in args.lang])]) + args.args
 
     if args.verbose:
         print('# '+' '.join(cmdline))

@@ -1,5 +1,4 @@
-#! /usr/bin/python3
-# fq2html
+# formatter.py
 # Copyright (C) 2022 Red Hat, Inc.
 #
 # Authors:
@@ -254,8 +253,7 @@ def output_diff(out, title, data, diffdata):
         out.write('\n'.join(footer) % {'progname': os.path.basename(__file__),
                                        'image': data['pattern']})
 
-if __name__ == '__main__':
-
+def main():
     parser = argparse.ArgumentParser(description='HTML formatter for fontquery',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
