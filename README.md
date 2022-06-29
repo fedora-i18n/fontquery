@@ -4,6 +4,12 @@
 
 fontquery is a tool to query fonts in the certain Fedora release.
 
+## How to install
+
+```
+$ pip install fontquery
+```
+
 ## Usage
 
 ```
