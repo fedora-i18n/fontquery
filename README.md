@@ -52,3 +52,13 @@ To generate html table:
 ```
 $ fontquery -m json -t langpacks | fq2html -o langpacks.html -
 ```
+
+## For developers
+
+Before committing something into git repository, you may want to do:
+
+```
+$ git config core.hooksPath hooks
+```
+
+to make sure our hook scripts works.
