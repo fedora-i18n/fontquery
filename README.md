@@ -1,4 +1,5 @@
 # Fontquery
+[![pip version badge](https://img.shields.io/pypi/v/fontquery)](https://pypi.org/project/fontquery/)
 [![tag badge](https://img.shields.io/github/v/tag/fedora-i18n/fontquery)](https://github.com/fedora-i18n/fontquery/tags)
 [![license badge](https://img.shields.io/github/license/fedora-i18n/fontquery)](./LICENSE)
 
