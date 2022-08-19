@@ -29,7 +29,7 @@ import markdown
 import os
 import re
 import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'cell_row_span')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, 'cell_row_span')))
 from cell_row_span import *
 
 def json2data(data):
@@ -284,3 +284,6 @@ def main():
             diffdata = json.load(args.diff)
 
         output_diff(args.output, args.title, data, diffdata)
+
+if __name__ == '__main__':
+    main()
