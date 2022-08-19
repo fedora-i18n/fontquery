@@ -60,7 +60,7 @@ ENTRYPOINT ["/usr/local/bin/fontquery-container", "--pattern", "both"]
 #
 # all
 #
-FROM both AS all
+FROM comps AS all
 ARG release
 ENV RELEASE ${release}
 
