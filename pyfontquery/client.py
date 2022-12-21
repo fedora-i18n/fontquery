@@ -21,63 +21,83 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  THE SOFTWARE PROVIDED HEREUNDER IS
 # ON AN "AS IS" BASIS, AND THE COPYRIGHT HOLDER HAS NO OBLIGATION TO
 # PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+"""Module to perform a client application for fontquery."""
 
 import argparse
 import os
-import re
 import shutil
 import subprocess
 import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)))
+
+sys.path.append(
+    os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)))
 try:
-    from pyfontquery import container
+    from pyfontquery import container  # noqa: F401
     local_not_supported = False
 except ModuleNotFoundError:
     local_not_supported = True
 
+
 def main():
-    parser = argparse.ArgumentParser(description='Query fonts',
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-r', '--release',
+    """Endpoint to execute fontquery client program."""
+    parser = argparse.ArgumentParser(
+        description='Query fonts',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-r',
+                        '--release',
                         default='rawhide',
                         help='Release number')
-    parser.add_argument('-l', '--lang',
+    parser.add_argument('-l',
+                        '--lang',
                         action='append',
                         help='Language list to dump fonts data into JSON')
-    parser.add_argument('-m', '--mode',
+    parser.add_argument('-m',
+                        '--mode',
                         default='fcmatch',
                         choices=['fcmatch', 'fclist', 'json'],
                         help='Action to perform for query')
-    parser.add_argument('-t', '--target',
+    parser.add_argument('-t',
+                        '--target',
                         default='langpacks',
                         choices=['comps', 'langpacks', 'both', 'all'],
                         help='Query fonts from')
-    parser.add_argument('-v', '--verbose',
+    parser.add_argument('-v',
+                        '--verbose',
                         action='count',
                         default=0,
                         help='Show more detailed logs')
-    parser.add_argument('args',
-                        nargs='*',
-                        help='Queries')
+    parser.add_argument('args', nargs='*', help='Queries')
 
     args = parser.parse_args()
     if args.release == 'local':
         if local_not_supported:
             raise TypeError('local query feature is not available.')
-        cmdline = ['fontquery-container', '-m', args.mode] + (['-'+''.join(['v'*(args.verbose-1)])] if args.verbose > 1 else []) + ([] if args.lang is None else [' '.join(['-l '+l for l in args.lang])]) + args.args
+        cmdline = ['fontquery-container', '-m', args.mode] + (
+            ['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
+            else []) + ([] if args.lang is None else
+                        [' '.join(['-l ' + ls
+                                   for ls in args.lang])]) + args.args
     else:
         if not shutil.which('podman'):
             print('podman is not installed')
             sys.exit(1)
 
-        cmdline = ['podman', 'run', '--rm', 'ghcr.io/fedora-i18n/fontquery-{}:{}'.format(args.target, args.release), '-m', args.mode] + (['-'+''.join(['v'*(args.verbose-1)])] if args.verbose > 1 else []) + ([] if args.lang is None else [' '.join(['-l '+l for l in args.lang])]) + args.args
+        cmdline = [
+            'podman', 'run', '--rm',
+            'ghcr.io/fedora-i18n/fontquery-{}:{}'.format(
+                args.target, args.release), '-m', args.mode
+        ] + (['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
+             else []) + ([] if args.lang is None else
+                         [' '.join(['-l ' + ls
+                                    for ls in args.lang])]) + args.args
 
     if args.verbose:
-        print('# '+' '.join(cmdline))
+        print('# ' + ' '.join(cmdline))
 
     retval = subprocess.run(cmdline, stdout=subprocess.PIPE)
 
     print(retval.stdout.decode('utf-8'))
+
 
 if __name__ == '__main__':
     main()

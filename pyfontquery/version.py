@@ -21,12 +21,16 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  THE SOFTWARE PROVIDED HEREUNDER IS
 # ON AN "AS IS" BASIS, AND THE COPYRIGHT HOLDER HAS NO OBLIGATION TO
 # PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+"""Module to deal with fontquery version."""
 
 import os
 
-def fontquery_version():
+
+def fontquery_version() -> str:
+    """Return fontquery version in string."""
     retval = None
-    with open(os.path.join(os.path.dirname(__file__), 'version.txt'), 'r') as f:
+    with open(os.path.join(os.path.dirname(__file__), 'version.txt'),
+              'r') as f:
         retval = f.read().strip()
 
     return retval

@@ -21,6 +21,7 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  THE SOFTWARE PROVIDED HEREUNDER IS
 # ON AN "AS IS" BASIS, AND THE COPYRIGHT HOLDER HAS NO OBLIGATION TO
 # PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+"""Module to build a container image for fontquery."""
 
 import sys
 import os
@@ -28,49 +29,71 @@ import argparse
 import subprocess
 import shutil
 
-def build(target, params = None):
-    cmdline = ['buildah', 'build', '-f', 'Dockerfile', '--build-arg', 'release={}'.format(params.release), '--target', target, '-t', 'ghcr.io/fedora-i18n/fontquery-{}:{}'.format(target, params.release), '.']
+
+def build(target: str, params: object = None) -> None:
+    """Build a container image."""
+    cmdline = [
+        'buildah', 'build', '-f', 'Dockerfile', '--build-arg',
+        'release={}'.format(params.release), '--target', target, '-t',
+        'ghcr.io/fedora-i18n/fontquery-{}:{}'.format(target,
+                                                     params.release), '.'
+    ]
     if params.verbose:
-        print('# '+' '.join(cmdline))
+        print('# ' + ' '.join(cmdline))
     if not params.try_run:
         subprocess.run(cmdline)
 
-def push(target, params = None):
-    cmdline = ['buildah', 'push', 'ghcr.io/fedora-i18n/fontquery-{}:{}'.format(target, params.release)]
+
+def push(target: str, params: object = None) -> None:
+    """Publish a container image."""
+    cmdline = [
+        'buildah', 'push',
+        'ghcr.io/fedora-i18n/fontquery-{}:{}'.format(target, params.release)
+    ]
     if params.verbose:
-        print('# '+' '.join(cmdline))
+        print('# ' + ' '.join(cmdline))
     if not params.try_run:
         subprocess.run(cmdline)
 
-def clean(target, params = None):
-    cmdline = ['buildah', 'rmi', 'ghcr.io/fedora-i18n/fontquery-{}:{}'.format(target, params.release)]
+
+def clean(target: str, params: object = None) -> None:
+    """Clean up container images."""
+    cmdline = [
+        'buildah', 'rmi',
+        'ghcr.io/fedora-i18n/fontquery-{}:{}'.format(target, params.release)
+    ]
     if params.verbose:
-        print('# '+' '.join(cmdline))
+        print('# ' + ' '.join(cmdline))
     if not params.try_run:
         subprocess.run(cmdline)
+
 
 def main():
-    parser = argparse.ArgumentParser(description='Build fontquery image',
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-r', '--release',
+    """Endpoint to execute fontquery-build."""
+    parser = argparse.ArgumentParser(
+        description='Build fontquery image',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-r',
+                        '--release',
                         default='rawhide',
                         help='Release number')
     parser.add_argument('--rmi',
                         action='store_true',
                         help='Remove image before building')
-    parser.add_argument('-p', '--push',
-                        action='store_true',
-                        help='Push image')
-    parser.add_argument('-s', '--skip-build',
+    parser.add_argument('-p', '--push', action='store_true', help='Push image')
+    parser.add_argument('-s',
+                        '--skip-build',
                         action='store_true',
                         help='Do not build image')
-    parser.add_argument('-t', '--target',
+    parser.add_argument('-t',
+                        '--target',
                         choices=['comps', 'langpacks', 'both', 'all'],
                         help='Take an action for the specific target only')
     parser.add_argument('--try-run',
                         action='store_true',
                         help='Do not take any actions')
-    parser.add_argument('-v', '--verbose',
+    parser.add_argument('-v',
+                        '--verbose',
                         action='store_true',
                         help='Show more detailed logs')
 
@@ -101,6 +124,7 @@ def main():
         if args.push:
             for t in target:
                 push(t, args)
+
 
 if __name__ == '__main__':
     main()
