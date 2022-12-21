@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fontquery"
+version = "1.0"
+authors = [
+  { name = "Akira TAGOH", email="akira@tagoh.org" }
+]
+description = "Query a font in Fedora release"
+readme = "README.md"
+requires-python = ">= 3.11"
+license.file = "LICENSE"
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+]
+keywords = [
+  "fedora",
+  "fonts",
+]
+dependencies = [
+  "markdown < 3.0",
+  "langtable",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/fedora-i18n/fontquery"
+"Bug Tracker" = "https://github.com/fedora-i18n/fontquery/issues"
+
+[project.entry-points.console_scripts]
+"fontquery-container" = "pyfontquery.container:main"
+"fontquery" = "pyfontquery.client:main"
+"fontquery-build" = "pyfontquery.build:main"
+"fq2html" = "pyfontquery.htmlformatter:main"
+
+[tool.setuptools]
+"py-modules" = [
+  "cell_row_span.cell_row_span"
+]
+"package-data" = { "pyfontquery" = [ "version.txt" ] }
