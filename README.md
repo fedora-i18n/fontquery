@@ -9,7 +9,7 @@ fontquery is a tool to query fonts in the certain Fedora release.
 
 ```
 $ git submodule update --init --recursive
-$ pip3 install --user build
+$ pip3 install --user build wheel
 $ python3 -m build
 $ pip3 install --user dist/fontquery*.whl
 ```
