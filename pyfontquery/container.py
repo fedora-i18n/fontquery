@@ -190,3 +190,6 @@ def main():
             print('# ' + ' '.join(cmdline), flush=True, file=sys.stderr)
 
         subprocess.run(cmdline)
+
+if __name__ == '__main__':
+    main()
