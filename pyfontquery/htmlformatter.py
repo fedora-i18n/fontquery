@@ -295,7 +295,7 @@ def output_diff(out: IO,
                                               diffdata['pattern']))
         header.append(('<div name="note" style="font-size: 10px; color: gray;"'
                        f">Legend: - ({data['pattern']}),"
-                       f" + ({diffdata['pattern']})</div>')"))
+                       f" + ({diffdata['pattern']})</div>"))
         footer = [
             '</table>',
             ('<div name=\"footer\" style=\"text-align:right;float:right;'
