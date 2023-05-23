@@ -33,7 +33,7 @@ import subprocess
 import sys
 import types
 from pathlib import Path
-from pyfontquery import version
+from fontquery import version
 try:
     from pyanaconda import localization
     defaultLangList = [

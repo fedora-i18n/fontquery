@@ -33,13 +33,14 @@ dependencies = [
 "Bug Tracker" = "https://github.com/fedora-i18n/fontquery/issues"
 
 [project.entry-points.console_scripts]
-"fontquery-container" = "pyfontquery.container:main"
-"fontquery" = "pyfontquery.client:main"
-"fontquery-build" = "pyfontquery.build:main"
-"fq2html" = "pyfontquery.htmlformatter:main"
+"fontquery-container" = "fontquery.container:main"
+"fontquery" = "fontquery.client:main"
+"fontquery-build" = "fontquery.build:main"
+"fq2html" = "fontquery.htmlformatter:main"
 
 [tool.setuptools]
+packages = ["fontquery"]
 "py-modules" = [
   "cell_row_span.cell_row_span"
 ]
-"package-data" = { "pyfontquery" = [ "version.txt" ] }
+"package-data" = { "fontquery" = [ "version.txt" ] }

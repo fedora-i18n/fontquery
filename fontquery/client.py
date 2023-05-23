@@ -32,7 +32,7 @@ import sys
 sys.path.append(
     os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)))
 try:
-    from pyfontquery import container  # noqa: F401
+    from fontquery import container  # noqa: F401
     local_not_supported = False
 except ModuleNotFoundError:
     local_not_supported = True
