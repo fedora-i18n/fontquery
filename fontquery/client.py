@@ -58,7 +58,7 @@ def main():
                         help='Action to perform for query')
     parser.add_argument('-t',
                         '--target',
-                        default='langpacks',
+                        default='comps',
                         choices=['comps', 'langpacks', 'both', 'all'],
                         help='Query fonts from')
     parser.add_argument('-v',
