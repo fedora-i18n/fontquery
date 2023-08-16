@@ -46,7 +46,7 @@ def main():
     parser.add_argument('-r',
                         '--release',
                         default='rawhide',
-                        help='Release number')
+                        help='Release number such as "rawhide" and "39". "local" to query from current environment instead of images')
     parser.add_argument('-l',
                         '--lang',
                         action='append',
