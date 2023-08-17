@@ -29,9 +29,10 @@ import shutil
 import subprocess
 import sys
 import warnings
-
-sys.path.append(
-    os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)))
+try:
+    import _debugpath # noqa: F401
+except ModuleNotFoundError:
+    pass
 try:
     from fontquery import container  # noqa: F401
     local_not_supported = False

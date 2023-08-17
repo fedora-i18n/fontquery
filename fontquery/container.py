@@ -33,6 +33,11 @@ import subprocess
 import sys
 import types
 from pathlib import Path
+import os
+try:
+    import _debugpath # noqa: F401
+except ModuleNotFoundError:
+    pass
 from fontquery import version
 try:
     from pyanaconda import localization
