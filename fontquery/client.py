@@ -74,7 +74,7 @@ def main():
     if args.release == 'local':
         if local_not_supported:
             raise TypeError('local query feature is not available.')
-        if args.target != parser.get_default('t'):
+        if args.target != parser.get_default('target'):
             warnings.warn("target option won't take any effects on local mode", RuntimeWarning, stacklevel=2)
         cmdline = ['fontquery-container', '-m', args.mode] + (
             ['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
