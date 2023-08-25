@@ -5,5 +5,5 @@ timestamp=$(date '+%Y%m%d%H%M%S')
 
 if [ -e .commit ]; then
     rm .commit
-    git update-index --add $basedir/../pyfontquery/version.txt
+    git update-index --add $basedir/../fontquery/version.txt
 fi
