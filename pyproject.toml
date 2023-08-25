@@ -44,3 +44,4 @@ packages = ["fontquery"]
   "cell_row_span.cell_row_span"
 ]
 "package-data" = { "fontquery" = [ "version.txt" ] }
+script-files = [ "scripts/fontquery-setup.sh" ]
