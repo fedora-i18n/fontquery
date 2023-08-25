@@ -1,5 +1,5 @@
 # client.py
-# Copyright (C) 2022 Red Hat, Inc.
+# Copyright (C) 2022-2023 Red Hat, Inc.
 #
 # Authors:
 #   Akira TAGOH  <tagoh@redhat.com>
@@ -60,8 +60,8 @@ def main():
                         help='Action to perform for query')
     parser.add_argument('-t',
                         '--target',
-                        default='comps',
-                        choices=['comps', 'langpacks', 'both', 'all'],
+                        default='minimal',
+                        choices=['minimal', 'extra', 'all'],
                         help='Query fonts from')
     parser.add_argument('-v',
                         '--verbose',

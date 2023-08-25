@@ -132,31 +132,18 @@ def output_table(out: IO, title: str, data: dict[str, Any]) -> None:
              ' certainly assigned to proper generic alias</div>'),
         ]
         match data['pattern']:
-            case 'comps':
+            case 'minimal':
                 header.append(('<div name="note" style="font-size: 10px; '
                                'color: gray;">This table was generated '
-                               'according to the result on environment '
-                               'where all the packages in fonts group has'
-                               ' been installed.</div>'))
-            case 'langpacks':
+                               'with minimal default fonts</div>'))
+            case 'extra':
                 header.append(('<div name="note" style="font-size: 10px; '
                                'color: gray;">This table was generated '
-                               'according to the result on environment '
-                               'where all the langpacks packages has '
-                               'been installed.</div>'))
-            case 'both':
-                header.append(('<div name="note" style="font-size: 10px; '
-                               'color: gray;">This table was generated '
-                               'according to the result on environment '
-                               'where all the packages in fonts group '
-                               'and all the langpacks packages has been '
-                               'installed.</div>'))
+                               'with default fonts + some extra fonts</div>'))
             case 'all':
                 header.append(('<div name="note" style="font-size: 10px; '
                                'color: gray;">This table was generated '
-                               'according to the result on environment '
-                               'where all the *-fonts packages has been '
-                               'installed with --skip-broken to dnf.</div>'))
+                               'with all the fonts available for distribution</div>'))
 
         footer = [
             '</table>',

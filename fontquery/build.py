@@ -1,5 +1,5 @@
 # build.py
-# Copyright (C) 2022 Red Hat, Inc.
+# Copyright (C) 2022-2023 Red Hat, Inc.
 #
 # Authors:
 #   Akira TAGOH  <tagoh@redhat.com>
@@ -87,7 +87,7 @@ def main():
                         help='Do not build image')
     parser.add_argument('-t',
                         '--target',
-                        choices=['comps', 'langpacks', 'both', 'all'],
+                        choices=['minimal', 'extra', 'all'],
                         help='Take an action for the specific target only')
     parser.add_argument('--try-run',
                         action='store_true',
@@ -115,7 +115,7 @@ def main():
         if args.push:
             push(args.target, args)
     else:
-        target = ['comps', 'langpacks', 'both', 'all']
+        target = ['minimal', 'extra', 'all']
         if not args.skip_build:
             for t in target:
                 if args.rmi:

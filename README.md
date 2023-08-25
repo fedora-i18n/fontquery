@@ -7,7 +7,13 @@ fontquery is a tool to query fonts in the certain Fedora release.
 
 ## How to install
 
+``` shell
+$ pip3 install fontquery
 ```
+
+## How to install from git
+
+``` shell
 $ git submodule update --init --recursive
 $ pip3 install --user build wheel
 $ python3 -m build
@@ -32,28 +38,28 @@ options:
   -l LANG, --lang LANG  Language list to dump fonts data into JSON (default: None)
   -m {fcmatch,fclist,json}, --mode {fcmatch,fclist,json}
                         Action to perform for query (default: fcmatch)
-  -t {comps,langpacks,both,all}, --target {comps,langpacks,both,all}
-                        Query fonts from (default: langpacks)
+  -t {minimal,extra,all}, --target {minimal,extra,all}
+                        Query fonts from (default: minimal)
   -v, --verbose         Show more detailed logs (default: 0)
 ```
 
 To query sans-serif for Hindi on Fedora 36,
 
-```
+``` shell
 $ fontquery -r 36 sans-serif:lang=hi
 Lohit-Devanagari.ttf: "Lohit Devanagari" "Regular"
 ```
 
 To generate JSON from langpacks installed environment:
 
-```
+``` shell
 $ fontquery -m json -t langpacks
 ...
 ```
 
 To generate html table:
 
-```
+``` shell
 $ fontquery -m json -t langpacks | fq2html -o langpacks.html -
 ```
 
@@ -61,7 +67,7 @@ $ fontquery -m json -t langpacks | fq2html -o langpacks.html -
 
 Before committing something into git repository, you may want to do:
 
-```
+``` shell
 $ git config core.hooksPath hooks
 ```
 
