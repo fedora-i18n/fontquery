@@ -6,7 +6,7 @@ timestamp=$(date '+%Y%m%d%H%M%S')
 git diff-index --cached HEAD | grep Dockerfile > /dev/null 2>&1
 if [ $? -eq 0 ]; then
     echo "Updating version.txt so that Dockerfile was updated."
-    echo $timestamp > $basedir/../pyfontquery/version.txt
-    git add $basedir/../pyfontquery/version.txt
+    echo $timestamp > $basedir/../fontquery/version.txt
+    git add $basedir/../fontquery/version.txt
     touch .commit
 fi
