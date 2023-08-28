@@ -16,9 +16,9 @@ Image setup script
 
 Usage: $PROG <options>
 Options:
--h, --help           Display this help and exit
--v, --verbose        Turn on debug
--t, --target=TARGET  Set a TARGET build (base, minimal, extra, all)
+-h         Display this help and exit
+-vose      Turn on debug
+-t=TARGET  Set a TARGET build (base, minimal, extra, all)
 _E_
 }
 
@@ -26,24 +26,19 @@ PROG="${PROG:-${0##*/}}"
 DEBUG="${DEBUG:-}"
 OPT_TARGET="${OPT_TARGET:-minimal}"
 
-opt=$(getopt -n $0 --options "hvt:" --longoptions "help,verbose,target:" -- "$@")
-eval set -- "$opt"
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    -h|--help)
+while getopts hvt: OPT; do
+  case "$OPT" in
+    h)
       msg_usage
       exit 0
       ;;
-    -v|--verbose)
+    v)
       DEBUG=1
       shift
       ;;
-    -t|--target)
-      OPT_TARGET="$2"
+    t)
+      OPT_TARGET="$OPTARG"
       shift 2
-      ;;
-    --)
-      shift
       ;;
     *)
       msg_usage
