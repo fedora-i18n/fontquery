@@ -3,7 +3,8 @@ FROM fedora:${release} AS base
 # LABEL
 
 # Install
-RUN echo "Setup base image"; fontquery-setup.sh -t base
+COPY scripts/fontquery-setup.sh /usr/local/bin/fontquery-setup.sh
+RUN echo "Setup base image"; /usr/local/bin/fontquery-setup.sh -t base
 
 #
 # minimal image
@@ -23,7 +24,7 @@ ENTRYPOINT ["/usr/local/bin/fontquery-container", "--pattern", "minimal"]
 #
 # extra image
 #
-FROM base AS extra
+FROM minimal AS extra
 ARG release
 ENV RELEASE ${release}
 
@@ -38,7 +39,7 @@ ENTRYPOINT ["/usr/local/bin/fontquery-container", "--pattern", "extra"]
 #
 # all
 #
-FROM comps AS all
+FROM extra AS all
 ARG release
 ENV RELEASE ${release}
 
