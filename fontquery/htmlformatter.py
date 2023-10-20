@@ -31,10 +31,6 @@ import os
 import re
 import sys
 from typing import Any, IO
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                             os.pardir, 'cell_row_span')))
-from cell_row_span import *
-
 
 def json2data(data: dict[str, Any]) -> dict[str, dict[str, Any]]:
     """Restructure JSON format."""
@@ -182,66 +178,111 @@ def output_diff(out: IO,
         missing_a[k] = sorteddiffdata[k]
     langdata = json2langgroup(matched)
 
-    md = [
-        'Language |   | default sans | default serif | default mono',
-        '-------- | - | ------------ | ------------- | ------------',
+    diff_templ = [
+        '<tr>',
+        '<td class="lang" rowspan="2">{lang}</td>',
+        '<td class="original symbol">-</td>',
+        '<td class="original">{old_sans}</td>',
+        '<td class="original">{old_serif}</td>',
+        '<td class="original">{old_mono}</td>',
+        '</tr>',
+        '<tr>',
+        '<td class="diff symbol">+</td>',
+        '<td class="diff">{new_sans}</td>',
+        '<td class="diff">{new_serif}</td>',
+        '<td class="diff">{new_mono}</td>',
+        '</tr>',
     ]
-    aliases = ['sans-serif', 'serif', 'monospace']
-    for k in sorted(langdata.keys()):
-        lang = ','.join(['{}({})'.format(ls, langdata[k][ls]['sans-serif']['lang']) for ls in langdata[k].keys()])
-        s = '{} {{ .lang }} | '.format(lang)
-        kk = list(langdata[k].keys())[0]
-        for a in aliases:
-            s += '| {}'.format(langdata[k][kk][a]['family'])
+    nodiff_templ = [
+        '<tr>',
+        '<td class="lang">{lang}</td>',
+        '<td></td>',
+        '<td>{sans}</td>',
+        '<td>{serif}</td>',
+        '<td>{mono}</td>',
+        '</tr>',
+    ]
+    header_templ = [
+        '<table><thead><tr>',
+        '<th>Language</th>',
+        '<th></th>',
+        '<th>default sans</th>',
+        '<th>default serif</th>',
+        '<th>default mono</th>',
+        '</tr></thead>',
+        '<tbody>',
+    ]
+    tables = []
 
-        md.append(s)
+    tables.append('\n'.join(header_templ))
+    aliases = ['sans-serif', 'serif', 'monospace']
+    aliasids = ['sans', 'serif', 'mono']
+    for k in sorted(langdata.keys()):
+        templ = '\n'.join(nodiff_templ)
+        lang = ','.join(['{}({})'.format(ls, langdata[k][ls]['sans-serif']['lang']) for ls in langdata[k].keys()])
+        kk = list(langdata[k].keys())[0]
+        s = templ.format(**{'lang': lang,
+                            'sans': langdata[k][kk]['sans-serif']['family'],
+                            'serif': langdata[k][kk]['serif']['family'],
+                            'mono': langdata[k][kk]['monospace']['family']
+                            })
+        tables.append(s)
 
     for k in sorted(missing_b.keys()):
-        s = ('{}({}) {{ .lang }} | - {{ .original .symbol }} '
-             '').format(k, missing_b[k]['sans-serif']['lang'])
-        for a in aliases:
-            s += '| {} {{ .original }} '.format(missing_b[k][a]['family'])
-
-        md.append(s)
-        s = ('_^ _| + { .diff .symbol } | N/A { .diff } | N/A { .diff }'
-             ' | N/A { .diff } ')
-        md.append(s)
+        lang = '{}({})'.format(k, missing_b[k]['sans-serif']['lang'])
+        templ = '\n'.join(diff_templ)
+        s = templ.format(**{'lang': lang,
+                            'old_sans': missing_b[k]['sans-serif']['family'],
+                            'old_serif': missing_b[k]['serif']['family'],
+                            'old_mono': missing_b[k]['monospace']['family'],
+                            'new_sans': 'N/A',
+                            'new_serif': 'N/A',
+                            'new_mono': 'N/A'
+                            })
+        tables.append(s)
 
     for k in sorted(missing_a.keys()):
-        mak = missing_a[k]['sans-serif']['lang']
-        s = ('{}({}) {{ .lang }} | - {{ .original .symbol }} |'
-             ' N/A {{ .original }} | N/A {{ .original }} |'
-             ' N/A {{ .original }} ').format(k, mak)
-        md.append(s)
-        s = '_^ _| + { .diff .symbol } '
-        for a in aliases:
-            s += '| {} {{ .diff }}'.format(missing_a[k][a]['family'])
-        md.append(s)
+        lang = '{}({})'.format(k, missing_a[k]['sans-serif']['lang'])
+        templ = '\n'.join(diff_templ)
+        s = templ.format(**{'lang': lang,
+                            'old_sans': 'N/A',
+                            'old_serif': 'N/A',
+                            'old_mono': 'N/A',
+                            'new_sans': missing_a[k]['sans-serif']['family'],
+                            'new_serif': missing_a[k]['serif']['family'],
+                            'new_mono': missing_a[k]['monospace']['family'],
+                            })
+        tables.append(s)
 
     langdiffdata = json2langgroupdiff(notmatched, sorteddiffdata)
 
     for k in langdiffdata.keys():
+        line = ['<tr>']
         lang = ','.join(['{}({})'.format(ls, langdiffdata[k][ls][0]['sans-serif']['lang']) for ls in langdiffdata[k].keys()])
-        s = '{} {{ .lang }} | - {{ .original .symbol }} '.format(lang)
+        line.append('<td class="lang" rowspan="2">{}'.format(lang))
+        line.append('<td class="original symbol">-</td>')
         diff = []
         kk = list(langdiffdata[k].keys())[0]
         vv = langdiffdata[k][kk]
         for a in aliases:
             if vv[0][a]['family'] == vv[1][a]['family']:
                 diff.append(None)
-                attr = ''
+                attr = 'rowspan="2"'
             else:
                 diff.append(vv[1][a])
-                attr = '{ .original }'
-            s += '| {} {}'.format(vv[0][a]['family'], attr)
-        md.append(s)
-        s = '_^ _| + { .diff .symbol } '
+                attr = 'class="original"'
+            line.append('<td {attr}>{family}</td>'.format(**{
+                'attr': attr,
+                'family': vv[0][a]['family']
+            }))
+        line.append('</tr><tr>')
+        line.append('<td class="diff symbol">+</td>')
         for x in diff:
             if x is None:
-                s += '|_^ _'
+                pass
             else:
-                s += '| {} {{ .diff }}'.format(x['family'])
-        md.append(s)
+                line.append('<td class="diff">{}</td>'.format(x['family']))
+        tables.append('\n'.join(line))
 
     with out:
         header = [
@@ -284,6 +325,8 @@ def output_diff(out: IO,
                        f">Legend: - ({data['pattern']}),"
                        f" + ({diffdata['pattern']})</div>"))
         footer = [
+            '</tr>',
+            '</tbody>',
             '</table>',
             ('<div name=\"footer\" style=\"text-align:right;float:right;'
              'font-size:10px;color:gray;\">Generated by fontquery'
@@ -292,10 +335,7 @@ def output_diff(out: IO,
             '</html>'
         ]
         out.write('\n'.join(header) % {'title': title})
-        out.write(markdown.markdown('\n'.join(md),
-                                    extensions=['tables',
-                                                'attr_list',
-                                                'cell_row_span']))
+        out.write('\n'.join(tables))
         out.write('\n'.join(footer) % {'progname': os.path.basename(__file__),
                                        'image': data['pattern']})
 

@@ -24,7 +24,7 @@ keywords = [
   "fonts",
 ]
 dependencies = [
-  "markdown < 3.0",
+  "markdown",
   "langtable",
 ]
 
@@ -40,8 +40,5 @@ dependencies = [
 
 [tool.setuptools]
 packages = ["fontquery"]
-"py-modules" = [
-  "cell_row_span.cell_row_span"
-]
 "package-data" = { "fontquery" = [ "version.txt" ] }
 script-files = [ "scripts/fontquery-setup.sh" ]
