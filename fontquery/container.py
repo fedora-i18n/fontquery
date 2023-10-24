@@ -32,8 +32,9 @@ import shutil
 import subprocess
 import sys
 import types
-from pathlib import Path
 import os
+from collections import Counter
+from pathlib import Path
 try:
     import _debugpath # noqa: F401
 except ModuleNotFoundError:
@@ -182,6 +183,11 @@ def main():
 
     args = parser.parse_args()
 
+    # Pick up langs only set by args
+    ll = Counter(args.lang)
+    ll.subtract(fclangs)
+    langlist = list(ll.elements())
+    args.lang = langlist if langlist else fclangs
     if isinstance(fccmd[args.mode], types.FunctionType):
         print(fccmd[args.mode](args))
     else:
