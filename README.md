@@ -14,7 +14,6 @@ $ pip3 install fontquery
 ## How to install from git
 
 ``` shell
-$ git submodule update --init --recursive
 $ pip3 install --user build wheel
 $ python3 -m build
 $ pip3 install --user dist/fontquery*.whl
@@ -61,6 +60,12 @@ To generate html table:
 
 ``` shell
 $ fontquery -m json -t langpacks | fq2html -o langpacks.html -
+```
+
+To check difference between local and reference:
+
+``` shell
+$ fontquery-diff -r 39 -R text
 ```
 
 ## For developers
