@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fontquery"
-version = "1.1"
+version = "1.2"
 authors = [
   { name = "Akira TAGOH", email="akira@tagoh.org" }
 ]
@@ -38,6 +38,7 @@ dependencies = [
 "fontquery" = "fontquery.client:main"
 "fontquery-build" = "fontquery.build:main"
 "fq2html" = "fontquery.htmlformatter:main"
+"fontquery-diff" = "fontquery.diff:main"
 
 [tool.setuptools]
 packages = ["fontquery"]
