@@ -30,7 +30,427 @@ import markdown
 import os
 import re
 import sys
+from termcolor import colored
 from typing import Any, IO, Iterator
+
+class DataRenderer:
+    """Abstract class for renderer"""
+
+    def __init__(self):
+        self.__title = None
+        self.__imagetype = None
+        self.__imagedifftype = None
+
+    @property
+    def title(self):
+        return self.__title
+
+    @title.setter
+    def title(self, v: str):
+        self.__title = v
+
+    @property
+    def imagetype(self):
+        return self.__imagetype
+
+    @imagetype.setter
+    def imagetype(self, v: str):
+        self.__imagetype = v
+
+    @property
+    def imagedifftype(self):
+        return self.__imagedifftype
+
+    @imagedifftype.setter
+    def imagedifftype(self, v: str):
+        self.__imagedifftype = v
+
+    def __diff__(self, data: dict[str, Any],
+                    missing_a: dict[str, Any],
+                    missing_b: dict[str, Any],
+                    diffdata: dict[str, Any]):
+        pass
+
+    def __table__(self, data: dict[str, Any]):
+        pass
+
+    def render_diff(self, data: dict[str, Any],
+                    missing_a: dict[str, Any],
+                    missing_b: dict[str, Any],
+                    diffdata: dict[str, Any]):
+        return self.__diff__(data, missing_a, missing_b, diffdata)
+
+    def render_table(self, data: dict[str, Any]):
+        return self.__table__(data)
+
+
+class HtmlRenderer(DataRenderer):
+    """Render html"""
+
+    def __init__(self):
+        super().__init__()
+
+    def __diff__(self, data: dict[str, Any],
+                    missing_a: dict[str, Any],
+                    missing_b: dict[str, Any],
+                    diffdata: dict[str, Any]):
+        diff_templ = [
+            '<tr>',
+            '<td class="lang" rowspan="2">{lang}</td>',
+            '<td class="original symbol">-</td>',
+            '<td class="original">{old_sans}</td>',
+            '<td class="original">{old_serif}</td>',
+            '<td class="original">{old_mono}</td>',
+            '</tr>',
+            '<tr>',
+            '<td class="diff symbol">+</td>',
+            '<td class="diff">{new_sans}</td>',
+            '<td class="diff">{new_serif}</td>',
+            '<td class="diff">{new_mono}</td>',
+            '</tr>',
+        ]
+        nodiff_templ = [
+            '<tr>',
+            '<td class="lang">{lang}</td>',
+            '<td></td>',
+            '<td>{sans}</td>',
+            '<td>{serif}</td>',
+            '<td>{mono}</td>',
+            '</tr>',
+        ]
+        header_templ = [
+            '<table><thead><tr>',
+            '<th>Language</th>',
+            '<th></th>',
+            '<th>default sans</th>',
+            '<th>default serif</th>',
+            '<th>default mono</th>',
+            '</tr></thead>',
+            '<tbody>',
+        ]
+        tables = []
+
+        tables.append('\n'.join(header_templ))
+        aliases = ['sans-serif', 'serif', 'monospace']
+        aliasids = ['sans', 'serif', 'mono']
+
+        for k in sorted(data.keys()):
+            templ = '\n'.join(nodiff_templ)
+            lang = ','.join(['{}({})'.format(ls, data[k][ls]['sans-serif']['lang']) for ls in data[k].keys()])
+            kk = list(data[k].keys())[0]
+            s = templ.format(**{'lang': lang,
+                                'sans': data[k][kk]['sans-serif']['family'],
+                                'serif': data[k][kk]['serif']['family'],
+                                'mono': data[k][kk]['monospace']['family']
+                                })
+            tables.append(s)
+
+        for k in sorted(missing_b.keys()):
+            lang = '{}({})'.format(k, missing_b[k]['sans-serif']['lang'])
+            templ = '\n'.join(diff_templ)
+            s = templ.format(**{'lang': lang,
+                                'old_sans': missing_b[k]['sans-serif']['family'],
+                                'old_serif': missing_b[k]['serif']['family'],
+                                'old_mono': missing_b[k]['monospace']['family'],
+                                'new_sans': 'N/A',
+                                'new_serif': 'N/A',
+                                'new_mono': 'N/A'
+                                })
+            tables.append(s)
+
+        for k in sorted(missing_a.keys()):
+            lang = '{}({})'.format(k, missing_a[k]['sans-serif']['lang'])
+            templ = '\n'.join(diff_templ)
+            s = templ.format(**{'lang': lang,
+                                'old_sans': 'N/A',
+                                'old_serif': 'N/A',
+                                'old_mono': 'N/A',
+                                'new_sans': missing_a[k]['sans-serif']['family'],
+                                'new_serif': missing_a[k]['serif']['family'],
+                                'new_mono': missing_a[k]['monospace']['family'],
+                                })
+            tables.append(s)
+
+        for k in diffdata.keys():
+            line = ['<tr>']
+            lang = ','.join(['{}({})'.format(ls, diffdata[k][ls][0]['sans-serif']['lang']) for ls in diffdata[k].keys()])
+            line.append('<td class="lang" rowspan="2">{}'.format(lang))
+            line.append('<td class="original symbol">-</td>')
+            diff = []
+            kk = list(diffdata[k].keys())[0]
+            vv = diffdata[k][kk]
+            for a in aliases:
+                if vv[0][a]['family'] == vv[1][a]['family']:
+                    diff.append(None)
+                    attr = 'rowspan="2"'
+                else:
+                    diff.append(vv[1][a])
+                    attr = 'class="original"'
+                line.append('<td {attr}>{family}</td>'.format(**{
+                    'attr': attr,
+                    'family': vv[0][a]['family']
+                }))
+            line.append('</tr><tr>')
+            line.append('<td class="diff symbol">+</td>')
+            for x in diff:
+                if x is None:
+                    pass
+                else:
+                    line.append('<td class="diff">{}</td>'.format(x['family']))
+            tables.append('\n'.join(line))
+
+        header = [
+            ('<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"'
+             ' \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">'),
+            '<html>',
+            ('<head><title>Fonts table for %(title)s</title>'
+             '<style type=\"text/css\">'),
+            'table {',
+            '  border-collapse: collapse;',
+            '}',
+            'table, th, td {',
+            '  border-style: solid;',
+            '  border-width: 1px;',
+            '  border-color: #000000;',
+            '}',
+            '.lang {',
+            '  word-break: break-all;',
+            '  width: 40%%;',
+            '}',
+            '.symbol {',
+            '  min-width: 10px;',
+            '  width: 1%%',
+            '}',
+            '.original {',
+            '  color: red',
+            '}',
+            '.diff {',
+            '  color: green',
+            '}',
+            '</style></head>',
+            '<body>',
+        ]
+        header.append(('<div name="note" style="font-size: 10px; color: gray;"'
+                       '>Note: No symbols at 2nd column means no difference.'
+                       ' -/+ symbols means there are difference between {} '
+                       'and {}</div>').format(self.imagetype,
+                                              self.imagedifftype))
+        header.append(('<div name="note" selftyle="font-size: 10px; color: gray;"'
+                       f">Legend: - ({self.imagetype}),"
+                       f" + ({self.imagedifftype})</div>"))
+        footer = [
+            '</tr>',
+            '</tbody>',
+            '</table>',
+            ('<div name=\"footer\" style=\"text-align:right;float:right;'
+             'font-size:10px;color:gray;\">Generated by fontquery'
+             '(%(image)s image) + %(progname)s</div>'),
+            '</body>',
+            '</html>'
+        ]
+        yield '\n'.join(header) % {'title': self.title}
+        yield from tables
+        yield '\n'.join(footer) % {'progname': os.path.basename(__file__),
+                                   'image': self.imagetype}
+
+
+    def __table__(self, data: dict[str, Any]):
+        md = [
+            'Language | default sans | default serif | default mono',
+            '-------- | ------------ | ------------- | ------------',
+        ]
+        for k in sorted(data.keys()):
+            aliases = {
+                'sans-serif': 'sans',
+                'serif': 'serif',
+                'monospace': 'mono'
+            }
+            s = '{}({}) '.format(k, data[k]['sans-serif']['lang'])
+            for kk, vv in aliases.items():
+                if re.search(r'(?i:{})'.format(vv), data[k][kk]['family']):
+                    attr = '.match'
+                else:
+                    attr = '.notmatch'
+                    s += '| {} {{ {} }}'.format(data[k][kk]['family'], attr)
+            md.append(s)
+
+        header = [
+            ('<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"'
+             ' \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">'),
+            '<html>',
+            ('<head><title>Fonts table for %(title)s</title>'
+             '<style type=\"text/css\">'),
+            'table {',
+            '  border-collapse: collapse;',
+            '}',
+            'table, th, td {',
+            '  border-style: solid;',
+            '  border-width: 1px;',
+            '  border-color: #000000;',
+            '}',
+            '.match {',
+            '}',
+            '.notmatch {',
+            '  color: orange',
+            '}',
+            '</style></head>',
+            '<body>',
+            ('<div name="note" style="font-size: 10px; color: gray;">'
+             'Note: orange colored name means needing some attention'
+             ' because there are no clue in family name if a font is'
+             ' certainly assigned to proper generic alias</div>'),
+        ]
+        match self.imagetype:
+            case 'minimal':
+                header.append(('<div name="note" style="font-size: 10px; '
+                               'color: gray;">This table was generated '
+                               'with minimal default fonts</div>'))
+            case 'extra':
+                header.append(('<div name="note" style="font-size: 10px; '
+                               'color: gray;">This table was generated '
+                               'with default fonts + some extra fonts</div>'))
+            case 'all':
+                header.append(('<div name="note" style="font-size: 10px; '
+                               'color: gray;">This table was generated '
+                               'with all the fonts available for distribution</div>'))
+
+        footer = [
+            '</table>',
+            ('<div name=\"footer\" style=\"text-align:right;float:right;'
+             'font-size:10px;color:gray;\">Generated by fontquery'
+             '(%(image)s image) + %(progname)s</div>'),
+            '</body>',
+            '</html>'
+        ]
+        yield '\n'.join(header) % {'title': self.title}
+        yield markdown.markdown('\n'.join(md),
+                                extensions=['tables', 'attr_list'])
+        yield '\n'.join(footer) % {'progname': os.path.basename(__file__),
+                                   'image': self.imagetype}
+
+
+class TextRenderer(DataRenderer):
+    """Render text"""
+
+    def __init__(self):
+        super().__init__()
+
+    @classmethod
+    def format_line(cls, column: list[str], length: list[int]) -> Iterator[str]:
+        l = []
+        retval = ''
+        for i, s in enumerate(column):
+            s = s + ' '*(15-length[i])
+            l.append(s)
+            if length[i] >= 16:
+                yield ' '.join(l)
+                l = []
+                for n in range(i+1):
+                    l.append(' '*15)
+        retval = ' '.join(l)
+        if retval.strip():
+            yield retval
+
+    def __diff__(self, data: dict[str, Any],
+                    missing_a: dict[str, Any],
+                    missing_b: dict[str, Any],
+                    diffdata: dict[str, Any]):
+        out = []
+        for s in TextRenderer.format_line([colored('Language', attrs=['bold']),
+                                           colored('default sans', attrs=['bold']),
+                                           colored('default serif', attrs=['bold']),
+                                           colored('default mono', attrs=['bold'])
+                                           ], [8, 12, 13, 12]):
+            out.append('  ' + s)
+        aliases = ['sans-serif', 'serif', 'monospace']
+        for k in sorted(data.keys()):
+            lang = ','.join(['{}({})'.format(ls, data[k][ls]['sans-serif']['lang']) for ls in data[k].keys()])
+            length = [len(lang)]
+            cols = [lang]
+            kk = list(data[k].keys())[0]
+            for a in aliases:
+                length.append(len(data[k][kk][a]['family']))
+                cols.append(data[k][kk][a]['family'])
+            for s in TextRenderer.format_line(cols, length):
+                out.append('  ' + s)
+        for k in sorted(missing_b.keys()):
+            lang = '{}({})'.format(k, missing_b[k]['sans-serif']['lang'])
+            length = [len(lang)]
+            cols = [lang]
+            for a in aliases:
+                length.append(len(missing_b[k][a]['family']))
+                cols.append(missing_b[k][a]['family'])
+            for s in TextRenderer.format_line(cols, length):
+                out.append(colored('- ' + s, 'red'))
+            for s in TextRenderer.format_line(['', 'N/A', 'N/A', 'N/A'],
+                                              [0, 3, 3, 3]):
+                out.append(colored('+ ' + s, 'green'))
+        for k in sorted(missing_a.keys()):
+            lang = '{}({})'.format(k, missing_a[k]['sans-serif']['lang'])
+            length = [len(lang)]
+            cols = [lang]
+            for a in aliases:
+                length.append(len(missing_a[k][a]['family']))
+                cols.append(missing_a[k][a]['family'])
+            for s in TextRenderer.format_line(['', 'N/A', 'N/A', 'N/A'],
+                                              [0, 3, 3, 3]):
+                out.append(colored('- ' + s, 'red'))
+            for s in TextRenderer.format_line(cols, length):
+                out.append(colored('+ ' + s, 'green'))
+        for k in diffdata.keys():
+            lang = ','.join(['{}({})'.format(ls, diffdata[k][ls][0]['sans-serif']['lang']) for ls in diffdata[k].keys()])
+            origlen = [len(lang)]
+            origcol = [lang]
+            difflen = [0]
+            diffcol = ['']
+            kk = list(diffdata[k].keys())[0]
+            vv = diffdata[k][kk]
+            for a in aliases:
+                if vv[0][a]['family'] == vv[1][a]['family']:
+                    difflen.append(0)
+                    diffcol.append('')
+                    origlen.append(len(vv[0][a]['family']))
+                    origcol.append(vv[0][a]['family'])
+                else:
+                    difflen.append(len(vv[1][a]['family']))
+                    diffcol.append(colored(vv[1][a]['family'], 'green'))
+                    origlen.append(len(vv[0][a]['family']))
+                    origcol.append(colored(vv[0][a]['family'], 'red'))
+            for s in TextRenderer.format_line(origcol, origlen):
+                out.append(colored('- ', 'red') + s)
+            for s in TextRenderer.format_line(diffcol, difflen):
+                out.append(colored('+ ', 'green') + s)
+
+        yield '\n'.join(out)
+
+    def __table__(self, data: dict[str, Any]):
+        out = [
+            '\t'.join([
+                colored('Language', attrs=['bold']),
+                colored('default sans', attrs=['bold']),
+                colored('default serif', attrs=['bold']),
+                colored('default mono', attrs=['bold']),
+            ])
+        ]
+        for k in sorted(data.keys()):
+            aliases = {
+                'sans-serif': 'sans',
+                'serif': 'serif',
+                'monospace': 'mono'
+            }
+            length = [len(k) + 2 + len(data[k]['sans-serif']['lang'])]
+            cols = ['{}({})'.format(k, data[k]['sans-serif']['lang'])]
+            for kk, vv in aliases.items():
+                length.append(len(data[k][kk]['family']))
+                if re.search(r'(?i:{})'.format(vv), data[k][kk]['family']):
+                    cols.append(data[k][kk]['family'])
+                else:
+                    cols.append(colored(data[k][kk]['family'], 'red'))
+            for s in TextRenderer.format_line(cols, length):
+                out.append(s)
+
+        yield '\n'.join(out)
+
 
 def json2data(data: dict[str, Any]) -> dict[str, dict[str, Any]]:
     """Restructure JSON format."""
@@ -77,85 +497,15 @@ def json2langgroupdiff(data: dict[str, Any],
     return retval
 
 
-def generate_table(title: str, data: dict[str, Any]) -> Iterator[str]:
+def generate_table(renderer: DataRenderer, title: str, data: dict[str, Any]) -> Iterator[str]:
     """Format data to HTML."""
     sorteddata = json2data(data)
-    md = [
-        'Language | default sans | default serif | default mono',
-        '-------- | ------------ | ------------- | ------------',
-    ]
-    for k in sorted(sorteddata.keys()):
-        aliases = {
-            'sans-serif': 'sans',
-            'serif': 'serif',
-            'monospace': 'mono'
-        }
-        s = '{}({}) '.format(k, sorteddata[k]['sans-serif']['lang'])
-        for kk, vv in aliases.items():
-            if re.search(r'(?i:{})'.format(vv), sorteddata[k][kk]['family']):
-                attr = '.match'
-            else:
-                attr = '.notmatch'
-            s += '| {} {{ {} }}'.format(sorteddata[k][kk]['family'], attr)
-
-        md.append(s)
-
-    header = [
-        ('<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"'
-         ' \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">'),
-        '<html>',
-        ('<head><title>Fonts table for %(title)s</title>'
-         '<style type=\"text/css\">'),
-        'table {',
-        '  border-collapse: collapse;',
-        '}',
-        'table, th, td {',
-        '  border-style: solid;',
-        '  border-width: 1px;',
-        '  border-color: #000000;',
-        '}',
-        '.match {',
-        '}',
-        '.notmatch {',
-        '  color: orange',
-        '}',
-        '</style></head>',
-        '<body>',
-        ('<div name="note" style="font-size: 10px; color: gray;">'
-         'Note: orange colored name means needing some attention'
-         ' because there are no clue in family name if a font is'
-         ' certainly assigned to proper generic alias</div>'),
-    ]
-    match data['pattern']:
-        case 'minimal':
-            header.append(('<div name="note" style="font-size: 10px; '
-                           'color: gray;">This table was generated '
-                           'with minimal default fonts</div>'))
-        case 'extra':
-            header.append(('<div name="note" style="font-size: 10px; '
-                           'color: gray;">This table was generated '
-                           'with default fonts + some extra fonts</div>'))
-        case 'all':
-            header.append(('<div name="note" style="font-size: 10px; '
-                           'color: gray;">This table was generated '
-                           'with all the fonts available for distribution</div>'))
-
-    footer = [
-        '</table>',
-        ('<div name=\"footer\" style=\"text-align:right;float:right;'
-         'font-size:10px;color:gray;\">Generated by fontquery'
-         '(%(image)s image) + %(progname)s</div>'),
-        '</body>',
-        '</html>'
-    ]
-    yield '\n'.join(header) % {'title': title}
-    yield markdown.markdown('\n'.join(md),
-                            extensions=['tables', 'attr_list'])
-    yield '\n'.join(footer) % {'progname': os.path.basename(__file__),
-                               'image': data['pattern']}
+    renderer.title = title
+    renderer.imagetype = data['pattern']
+    yield from renderer.render_table(sorteddata)
 
 
-def generate_diff(title: str, data: dict[str, Any],
+def generate_diff(renderer: DataRenderer, title: str, data: dict[str, Any],
                   diffdata: dict[str, Any]) -> Iterator[str]:
     """Format difference between two JSONs to HTML."""
     sorteddata = json2data(data)
@@ -175,166 +525,14 @@ def generate_diff(title: str, data: dict[str, Any],
     for k in sorted(list(set(sorteddiffdata.keys()) - set(sorteddata.keys()))):
         missing_a[k] = sorteddiffdata[k]
     langdata = json2langgroup(matched)
-
-    diff_templ = [
-        '<tr>',
-        '<td class="lang" rowspan="2">{lang}</td>',
-        '<td class="original symbol">-</td>',
-        '<td class="original">{old_sans}</td>',
-        '<td class="original">{old_serif}</td>',
-        '<td class="original">{old_mono}</td>',
-        '</tr>',
-        '<tr>',
-        '<td class="diff symbol">+</td>',
-        '<td class="diff">{new_sans}</td>',
-        '<td class="diff">{new_serif}</td>',
-        '<td class="diff">{new_mono}</td>',
-        '</tr>',
-    ]
-    nodiff_templ = [
-        '<tr>',
-        '<td class="lang">{lang}</td>',
-        '<td></td>',
-        '<td>{sans}</td>',
-        '<td>{serif}</td>',
-        '<td>{mono}</td>',
-        '</tr>',
-    ]
-    header_templ = [
-        '<table><thead><tr>',
-        '<th>Language</th>',
-        '<th></th>',
-        '<th>default sans</th>',
-        '<th>default serif</th>',
-        '<th>default mono</th>',
-        '</tr></thead>',
-        '<tbody>',
-    ]
-    tables = []
-
-    tables.append('\n'.join(header_templ))
-    aliases = ['sans-serif', 'serif', 'monospace']
-    aliasids = ['sans', 'serif', 'mono']
-    for k in sorted(langdata.keys()):
-        templ = '\n'.join(nodiff_templ)
-        lang = ','.join(['{}({})'.format(ls, langdata[k][ls]['sans-serif']['lang']) for ls in langdata[k].keys()])
-        kk = list(langdata[k].keys())[0]
-        s = templ.format(**{'lang': lang,
-                            'sans': langdata[k][kk]['sans-serif']['family'],
-                            'serif': langdata[k][kk]['serif']['family'],
-                            'mono': langdata[k][kk]['monospace']['family']
-                            })
-        tables.append(s)
-
-    for k in sorted(missing_b.keys()):
-        lang = '{}({})'.format(k, missing_b[k]['sans-serif']['lang'])
-        templ = '\n'.join(diff_templ)
-        s = templ.format(**{'lang': lang,
-                            'old_sans': missing_b[k]['sans-serif']['family'],
-                            'old_serif': missing_b[k]['serif']['family'],
-                            'old_mono': missing_b[k]['monospace']['family'],
-                            'new_sans': 'N/A',
-                            'new_serif': 'N/A',
-                            'new_mono': 'N/A'
-                            })
-        tables.append(s)
-
-    for k in sorted(missing_a.keys()):
-        lang = '{}({})'.format(k, missing_a[k]['sans-serif']['lang'])
-        templ = '\n'.join(diff_templ)
-        s = templ.format(**{'lang': lang,
-                            'old_sans': 'N/A',
-                            'old_serif': 'N/A',
-                            'old_mono': 'N/A',
-                            'new_sans': missing_a[k]['sans-serif']['family'],
-                            'new_serif': missing_a[k]['serif']['family'],
-                            'new_mono': missing_a[k]['monospace']['family'],
-                            })
-        tables.append(s)
-
     langdiffdata = json2langgroupdiff(notmatched, sorteddiffdata)
 
-    for k in langdiffdata.keys():
-        line = ['<tr>']
-        lang = ','.join(['{}({})'.format(ls, langdiffdata[k][ls][0]['sans-serif']['lang']) for ls in langdiffdata[k].keys()])
-        line.append('<td class="lang" rowspan="2">{}'.format(lang))
-        line.append('<td class="original symbol">-</td>')
-        diff = []
-        kk = list(langdiffdata[k].keys())[0]
-        vv = langdiffdata[k][kk]
-        for a in aliases:
-            if vv[0][a]['family'] == vv[1][a]['family']:
-                diff.append(None)
-                attr = 'rowspan="2"'
-            else:
-                diff.append(vv[1][a])
-                attr = 'class="original"'
-            line.append('<td {attr}>{family}</td>'.format(**{
-                'attr': attr,
-                'family': vv[0][a]['family']
-            }))
-        line.append('</tr><tr>')
-        line.append('<td class="diff symbol">+</td>')
-        for x in diff:
-            if x is None:
-                pass
-            else:
-                line.append('<td class="diff">{}</td>'.format(x['family']))
-        tables.append('\n'.join(line))
+    renderer.title = title
+    renderer.imagetype = data['pattern']
+    renderer.imagedifftype = diffdata['pattern']
 
-    header = [
-        ('<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"'
-         ' \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">'),
-        '<html>',
-        ('<head><title>Fonts table for %(title)s</title>'
-         '<style type=\"text/css\">'),
-        'table {',
-        '  border-collapse: collapse;',
-        '}',
-        'table, th, td {',
-        '  border-style: solid;',
-        '  border-width: 1px;',
-        '  border-color: #000000;',
-        '}',
-        '.lang {',
-        '  word-break: break-all;',
-        '  width: 40%%;',
-        '}',
-        '.symbol {',
-        '  min-width: 10px;',
-        '  width: 1%%',
-        '}',
-        '.original {',
-        '  color: red',
-        '}',
-        '.diff {',
-        '  color: green',
-        '}',
-        '</style></head>',
-        '<body>',
-    ]
-    header.append(('<div name="note" style="font-size: 10px; color: gray;"'
-                   '>Note: No symbols at 2nd column means no difference.'
-                   ' -/+ symbols means there are difference between {} '
-                   'and {}</div>').format(data['pattern'],
-                                          diffdata['pattern']))
-    header.append(('<div name="note" selftyle="font-size: 10px; color: gray;"'
-                   f">Legend: - ({data['pattern']}),"
-                   f" + ({diffdata['pattern']})</div>"))
-    footer = [
-        '</tr>',
-        '</tbody>',
-        '</table>',
-        ('<div name=\"footer\" style=\"text-align:right;float:right;'
-         'font-size:10px;color:gray;\">Generated by fontquery'
-         '(%(image)s image) + %(progname)s</div>'),
-        '</body>',
-        '</html>'
-    ]
-    yield '\n'.join(header) % {'title': title}
-    yield from tables
-    yield '\n'.join(footer) % {'progname': os.path.basename(__file__),
-                               'image': data['pattern']}
+    yield from renderer.render_diff(langdata, missing_a, missing_b, langdiffdata)
+
 
 def main():
     """Endpoint to execute fq2html program."""
@@ -342,6 +540,8 @@ def main():
     parser = argparse.ArgumentParser(description=('HTML formatter '
                                                   'for fontquery'),
                                      formatter_class=fmc)
+    renderer = {'html': HtmlRenderer,
+                'text': TextRenderer}
 
     parser.add_argument('-o', '--output',
                         type=argparse.FileType('w'),
@@ -353,6 +553,9 @@ def main():
                         type=argparse.FileType('r'),
                         help=('Output difference between FILE and DIFF'
                               ' as secondary'))
+    parser.add_argument('-R', '--render',
+                        default='html',
+                        choices=renderer.keys())
     parser.add_argument('FILE',
                         type=argparse.FileType('r'),
                         help='JSON file to read or - to read from stdin')
@@ -366,14 +569,14 @@ def main():
 
     if args.diff is None:
         with args.output:
-            for s in generate_table(args.title, data):
+            for s in generate_table(renderer[args.render](), args.title, data):
                 args.output.write(s)
     else:
         with args.diff:
             diffdata = json.load(args.diff)
 
         with args.output:
-            for s in generate_diff(args.title, data, diffdata):
+            for s in generate_diff(renderer[args.render](), args.title, data, diffdata):
                 args.output.write(s)
 
 
