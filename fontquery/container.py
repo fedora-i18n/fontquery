@@ -173,6 +173,10 @@ def main():
     parser.add_argument('-p',
                         '--pattern',
                         help='Query pattern to identify fonts data into JSON')
+    parser.add_argument('-V',
+                        '--version',
+                        action='store_true',
+                        help='Show image version')
     parser.add_argument('-v',
                         '--verbose',
                         action='store_true',
@@ -183,6 +187,9 @@ def main():
 
     args = parser.parse_args()
 
+    if args.version:
+        print(version.fontquery_version())
+        sys.exit(0)
     # Pick up langs only set by args
     ll = Counter(args.lang)
     ll.subtract(fclangs)
