@@ -424,14 +424,13 @@ class TextRenderer(DataRenderer):
         yield '\n'.join(out)
 
     def __table__(self, data: dict[str, Any]):
-        out = [
-            '\t'.join([
-                colored('Language', attrs=['bold']),
-                colored('default sans', attrs=['bold']),
-                colored('default serif', attrs=['bold']),
-                colored('default mono', attrs=['bold']),
-            ])
-        ]
+        out = []
+        for s in TextRenderer.format_line([colored('Language', attrs=['bold']),
+                                           colored('default sans', attrs=['bold']),
+                                           colored('default serif', attrs=['bold']),
+                                           colored('default mono', attrs=['bold']),
+                                           ], [8, 12, 13, 12]):
+            out.append(s)
         for k in sorted(data.keys()):
             aliases = {
                 'sans-serif': 'sans',
