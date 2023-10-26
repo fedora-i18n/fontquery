@@ -106,7 +106,7 @@ def dump(params: object) -> str:
                 ('%{file:-<unknown filename|basename},'
                  '%{family[0]:-<unknown family>},'
                  '%{style[0]:-<unknown style>}\\n'),
-                '{}:lang={}'.format(f, ls)
+                '{}:lang={}'.format(f, ls.replace('_','-'))
             ]
             if params.verbose:
                 print('# ' + ' '.join(cmdline), flush=True, file=sys.stderr)
