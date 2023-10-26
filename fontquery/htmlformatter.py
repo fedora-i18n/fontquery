@@ -329,6 +329,27 @@ class HtmlRenderer(DataRenderer):
                                    'image': self.imagetype}
 
 
+class ColoredText(str):
+    """A Class to handle colored text"""
+
+    def __new__(cls, *args, **kw):
+        text = kw['text'] if 'text' in kw else args[0]
+        retval = str.__new__(cls, text)
+        if 'color' not in kw:
+            kw['color'] = args[1] if len(args) > 1 else None
+        if 'on_color' not in kw:
+            kw['on_color'] = args[2] if len(args) > 2 else None
+        if 'attrs' not in kw:
+            kw['attrs'] = args[3] if len(args) > 3 else None
+        retval.__color = kw['color']
+        retval.__on_color = kw['on_color']
+        retval.__attrs = kw['attrs']
+        return retval
+
+    def cstr(self):
+        return colored(self.__str__(), self.__color, self.__on_color, self.__attrs)
+
+
 class TextRenderer(DataRenderer):
     """Render text"""
 
@@ -336,13 +357,14 @@ class TextRenderer(DataRenderer):
         super().__init__()
 
     @classmethod
-    def format_line(cls, column: list[str], length: list[int]) -> Iterator[str]:
+    def format_line(cls, column: list[ColoredText]) -> Iterator[str]:
         l = []
         retval = ''
         for i, s in enumerate(column):
-            s = s + ' '*(15-length[i])
+            n = len(s)
+            s = s.cstr() + ' '*(15-n)
             l.append(s)
-            if length[i] >= 16:
+            if n >= 16:
                 yield ' '.join(l)
                 l = []
                 for n in range(i+1):
@@ -356,80 +378,72 @@ class TextRenderer(DataRenderer):
                     missing_b: dict[str, Any],
                     diffdata: dict[str, Any]):
         out = []
-        for s in TextRenderer.format_line([colored('Language', attrs=['bold']),
-                                           colored('default sans', attrs=['bold']),
-                                           colored('default serif', attrs=['bold']),
-                                           colored('default mono', attrs=['bold'])
-                                           ], [8, 12, 13, 12]):
+        for s in TextRenderer.format_line([ColoredText('Language', attrs=['bold']),
+                                           ColoredText('default sans', attrs=['bold']),
+                                           ColoredText('default serif', attrs=['bold']),
+                                           ColoredText('default mono', attrs=['bold'])
+                                           ]):
             out.append('  ' + s)
         aliases = ['sans-serif', 'serif', 'monospace']
         for k in sorted(data.keys()):
             lang = ','.join(['{}({})'.format(ls, data[k][ls]['sans-serif']['lang']) for ls in data[k].keys()])
-            length = [len(lang)]
-            cols = [lang]
+            cols = [ColoredText(lang)]
             kk = list(data[k].keys())[0]
             for a in aliases:
-                length.append(len(data[k][kk][a]['family']))
-                cols.append(data[k][kk][a]['family'])
-            for s in TextRenderer.format_line(cols, length):
+                cols.append(ColoredText(data[k][kk][a]['family']))
+            for s in TextRenderer.format_line(cols):
                 out.append('  ' + s)
         for k in sorted(missing_b.keys()):
             lang = '{}({})'.format(k, missing_b[k]['sans-serif']['lang'])
-            length = [len(lang)]
-            cols = [lang]
+            cols = [ColoredText(lang)]
             for a in aliases:
-                length.append(len(missing_b[k][a]['family']))
-                cols.append(missing_b[k][a]['family'])
-            for s in TextRenderer.format_line(cols, length):
+                cols.append(ColoredText(missing_b[k][a]['family']))
+            for s in TextRenderer.format_line(cols):
                 out.append(colored('- ' + s, 'red'))
-            for s in TextRenderer.format_line(['', 'N/A', 'N/A', 'N/A'],
-                                              [0, 3, 3, 3]):
+            for s in TextRenderer.format_line([ColoredText(''),
+                                               ColoredText('N/A'),
+                                               ColoredText('N/A'),
+                                               ColoredText('N/A')]):
                 out.append(colored('+ ' + s, 'green'))
         for k in sorted(missing_a.keys()):
             lang = '{}({})'.format(k, missing_a[k]['sans-serif']['lang'])
-            length = [len(lang)]
-            cols = [lang]
+            cols = [ColoredText(lang)]
             for a in aliases:
-                length.append(len(missing_a[k][a]['family']))
-                cols.append(missing_a[k][a]['family'])
-            for s in TextRenderer.format_line(['', 'N/A', 'N/A', 'N/A'],
-                                              [0, 3, 3, 3]):
+                cols.append(ColoredText(missing_a[k][a]['family']))
+            for s in TextRenderer.format_line([ColoredText(''),
+                                               ColoredText('N/A'),
+                                               ColoredText('N/A'),
+                                               ColoredText('N/A')]):
                 out.append(colored('- ' + s, 'red'))
-            for s in TextRenderer.format_line(cols, length):
+            for s in TextRenderer.format_line(cols):
                 out.append(colored('+ ' + s, 'green'))
         for k in diffdata.keys():
             lang = ','.join(['{}({})'.format(ls, diffdata[k][ls][0]['sans-serif']['lang']) for ls in diffdata[k].keys()])
-            origlen = [len(lang)]
-            origcol = [lang]
-            difflen = [0]
-            diffcol = ['']
+            origcol = [ColoredText(lang)]
+            diffcol = [ColoredText('')]
             kk = list(diffdata[k].keys())[0]
             vv = diffdata[k][kk]
             for a in aliases:
                 if vv[0][a]['family'] == vv[1][a]['family']:
-                    difflen.append(0)
-                    diffcol.append('')
-                    origlen.append(len(vv[0][a]['family']))
-                    origcol.append(vv[0][a]['family'])
+                    diffcol.append(ColoredText(''))
+                    origcol.append(ColoredText(vv[0][a]['family']))
                 else:
-                    difflen.append(len(vv[1][a]['family']))
-                    diffcol.append(colored(vv[1][a]['family'], 'green'))
-                    origlen.append(len(vv[0][a]['family']))
-                    origcol.append(colored(vv[0][a]['family'], 'red'))
-            for s in TextRenderer.format_line(origcol, origlen):
+                    diffcol.append(ColoredText(vv[1][a]['family'], 'green'))
+                    origcol.append(ColoredText(vv[0][a]['family'], 'red'))
+            for s in TextRenderer.format_line(origcol):
                 out.append(colored('- ', 'red') + s)
-            for s in TextRenderer.format_line(diffcol, difflen):
+            for s in TextRenderer.format_line(diffcol):
                 out.append(colored('+ ', 'green') + s)
 
-        yield '\n'.join(out)
+        yield '\n'.join(out) + '\n'
 
     def __table__(self, data: dict[str, Any]):
         out = []
-        for s in TextRenderer.format_line([colored('Language', attrs=['bold']),
-                                           colored('default sans', attrs=['bold']),
-                                           colored('default serif', attrs=['bold']),
-                                           colored('default mono', attrs=['bold']),
-                                           ], [8, 12, 13, 12]):
+        for s in TextRenderer.format_line([ColoredText('Language', attrs=['bold']),
+                                           ColoredText('default sans', attrs=['bold']),
+                                           ColoredText('default serif', attrs=['bold']),
+                                           ColoredText('default mono', attrs=['bold'])
+                                           ]):
             out.append(s)
         for k in sorted(data.keys()):
             aliases = {
@@ -437,18 +451,16 @@ class TextRenderer(DataRenderer):
                 'serif': 'serif',
                 'monospace': 'mono'
             }
-            length = [len(k) + 2 + len(data[k]['sans-serif']['lang'])]
-            cols = ['{}({})'.format(k, data[k]['sans-serif']['lang'])]
+            cols = [ColoredText('{}({})'.format(k, data[k]['sans-serif']['lang']))]
             for kk, vv in aliases.items():
-                length.append(len(data[k][kk]['family']))
                 if re.search(r'(?i:{})'.format(vv), data[k][kk]['family']):
-                    cols.append(data[k][kk]['family'])
+                    cols.append(ColoredText(data[k][kk]['family']))
                 else:
-                    cols.append(colored(data[k][kk]['family'], 'red'))
-            for s in TextRenderer.format_line(cols, length):
+                    cols.append(ColoredText(data[k][kk]['family'], 'red'))
+            for s in TextRenderer.format_line(cols):
                 out.append(s)
 
-        yield '\n'.join(out)
+        yield '\n'.join(out) + '\n'
 
 
 def json2data(data: dict[str, Any]) -> dict[str, dict[str, Any]]:
