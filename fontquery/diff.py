@@ -67,7 +67,7 @@ def main():
                         default='-',
                         help='Output file')
     parser.add_argument('-R', '--render',
-                        default='html',
+                        default='text',
                         choices=renderer.keys())
     parser.add_argument('-t',
                         '--target',
