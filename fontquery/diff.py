@@ -40,6 +40,8 @@ try:
 except ModuleNotFoundError:
     local_not_supported = True
 from fontquery import htmlformatter # noqa: F401
+from pathlib import Path
+from xdg import BaseDirectory
 
 def main():
     """Endpoint to execute fontquery diff program."""
@@ -49,6 +51,9 @@ def main():
     parser = argparse.ArgumentParser(
         description='Show difference between local and reference',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--disable-cache',
+                        action='store_true',
+                        help='Enforce processing everything even if not updating')
     parser.add_argument('-r',
                         '--release',
                         default='rawhide',
@@ -83,19 +88,32 @@ def main():
         print('podman is not installed')
         sys.exit(1)
 
-    print('This may take some time...', file=sys.stderr)
-    cmdline = [
-        'podman', 'run', '--rm',
-        'ghcr.io/fedora-i18n/fontquery-{}:{}'.format(
-            args.target, args.release), '-m', 'json'
-    ] + (['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
-         else []) + ([] if args.lang is None else
-                     [' '.join(['-l ' + ls
-                                for ls in args.lang])]) + args.args
-    if args.verbose:
-        print('# ' + ' '.join(cmdline))
+    cache = None
+    out = None
+    retval_a = None
+    if not args.lang:
+        cachedir = BaseDirectory.save_cache_path('fontquery')
+        cache = Path(cachedir) / 'fedora-{}-{}.json'.format(args.release, args.target)
+        try:
+            with open(cache) as f:
+                out = f.read()
+        except FileNotFoundError:
+            pass
+    if args.disable_cache or not cache or not cache.exists():
+        print('This may take some time...', file=sys.stderr)
+        cmdline = [
+            'podman', 'run', '--rm',
+            'ghcr.io/fedora-i18n/fontquery-{}:{}'.format(
+                args.target, args.release), '-m', 'json'
+        ] + (['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
+             else []) + ([] if args.lang is None else
+                         [' '.join(['-l ' + ls
+                                    for ls in args.lang])]) + args.args
+        if args.verbose:
+            print('# ' + ' '.join(cmdline))
 
-    retval_a = subprocess.run(cmdline, stdout=subprocess.PIPE)
+        retval_a = subprocess.run(cmdline, stdout=subprocess.PIPE)
+        out = retval_a.stdout.decode('utf-8')
 
     cmdline = ['fontquery-container', '-m', 'json'] + (
         ['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
@@ -109,9 +127,13 @@ def main():
 
     with args.output:
         for s in htmlformatter.generate_diff(renderer[args.render](), '',
-                                             json.loads(retval_a.stdout.decode('utf-8')),
+                                             json.loads(out),
                                              json.loads(retval_b.stdout.decode('utf-8'))):
             args.output.write(s)
+
+    if cache and retval_a:
+        with open(cache, 'w') as f:
+            f.write(out)
 
 if __name__ == '__main__':
     main()
