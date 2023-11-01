@@ -28,13 +28,16 @@ import os
 import argparse
 import subprocess
 import shutil
+from importlib.resources import files
 
 
 def build(target: str, params: object = None) -> None:
     """Build a container image."""
     cmdline = [
-        'buildah', 'build', '-f', 'Dockerfile', '--build-arg',
-        'release={}'.format(params.release), '--target', target, '-t',
+        'buildah', 'build', '-f', str(files('fontquery.data').joinpath('Containerfile')), '--build-arg',
+        'release={}'.format(params.release), '--build-arg',
+        'setup={}'.format(files('fontquery.scripts').joinpath('fontquery-setup.sh')),
+        '--target', target, '-t',
         'ghcr.io/fedora-i18n/fontquery-{}:{}'.format(target,
                                                      params.release), '.'
     ]
@@ -99,8 +102,8 @@ def main():
 
     args = parser.parse_args()
 
-    if not os.path.isfile('Dockerfile'):
-        print('Dockerfile is missing')
+    if not os.path.isfile(files('fontquery.data').joinpath('Containerfile')):
+        print('Containerfile is missing')
         sys.exit(1)
 
     if not shutil.which('buildah'):

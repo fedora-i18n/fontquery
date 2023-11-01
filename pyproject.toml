@@ -41,7 +41,10 @@ dependencies = [
 "fq2html" = "fontquery.htmlformatter:main"
 "fontquery-diff" = "fontquery.diff:main"
 
-[tool.setuptools]
-packages = ["fontquery"]
-"package-data" = { "fontquery" = [ "version.txt" ] }
-script-files = [ "scripts/fontquery-setup.sh" ]
+[tool.setuptools.packages.find]
+namespaces = true
+
+[tool.setuptools.package-data]
+fontquery = [ "version.txt" ]
+"fontquery.scripts" = [ "fontquery-setup.sh" ]
+"fontquery.data" = [ "Containerfile*" ]
