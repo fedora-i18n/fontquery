@@ -33,13 +33,15 @@ from importlib.resources import files
 
 def build(target: str, params: object = None) -> None:
     """Build a container image."""
+    abssetup = files('fontquery.scripts').joinpath('fontquery-setup.sh')
+    setuppath = str(abssetup.parent)
+    setup = str(abssetup.name)
     cmdline = [
         'buildah', 'build', '-f', str(files('fontquery.data').joinpath('Containerfile')), '--build-arg',
         'release={}'.format(params.release), '--build-arg',
-        'setup={}'.format(files('fontquery.scripts').joinpath('fontquery-setup.sh')),
-        '--target', target, '-t',
-        'ghcr.io/fedora-i18n/fontquery-{}:{}'.format(target,
-                                                     params.release), '.'
+        'setup={}'.format(setup), '--target', target, '-t',
+        'ghcr.io/fedora-i18n/fontquery/fedora/{}:{}'.format(target,
+                                                            params.release), setuppath
     ]
     if params.verbose:
         print('# ' + ' '.join(cmdline))
@@ -51,7 +53,7 @@ def push(target: str, params: object = None) -> None:
     """Publish a container image."""
     cmdline = [
         'buildah', 'push',
-        'ghcr.io/fedora-i18n/fontquery-{}:{}'.format(target, params.release)
+        'ghcr.io/fedora-i18n/fontquery/fedora/{}:{}'.format(target, params.release)
     ]
     if params.verbose:
         print('# ' + ' '.join(cmdline))
@@ -63,7 +65,7 @@ def clean(target: str, params: object = None) -> None:
     """Clean up container images."""
     cmdline = [
         'buildah', 'rmi',
-        'ghcr.io/fedora-i18n/fontquery-{}:{}'.format(target, params.release)
+        'ghcr.io/fedora-i18n/fontquery/fedora/{}:{}'.format(target, params.release)
     ]
     if params.verbose:
         print('# ' + ' '.join(cmdline))

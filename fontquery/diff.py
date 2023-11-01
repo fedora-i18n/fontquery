@@ -103,7 +103,7 @@ def main():
         print('This may take some time...', file=sys.stderr)
         cmdline = [
             'podman', 'run', '--rm',
-            'ghcr.io/fedora-i18n/fontquery-{}:{}'.format(
+            'ghcr.io/fedora-i18n/fontquery/fedora/{}:{}'.format(
                 args.target, args.release), '-m', 'json'
         ] + (['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
              else []) + ([] if args.lang is None else

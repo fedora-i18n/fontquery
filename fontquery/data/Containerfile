@@ -1,7 +1,9 @@
 ARG release=38
-ARG setup=fontquery/scripts/fontquery-setup.sh
 FROM registry.fedoraproject.org/fedora:${release} AS base
-ENV NAME=fontquery/fedora/base RELEASE=${release}
+ARG release
+ARG setup=./fontquery/scripts/fontquery-setup.sh
+ENV NAME=fontquery/fedora/base
+ENV RELEASE=${release}
 # LABEL
 LABEL org.opencontainers.image.ref.name="$NAME" \
       org.opencontainers.image.version="$RELEASE" \
