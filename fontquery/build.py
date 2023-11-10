@@ -31,46 +31,101 @@ import shutil
 from importlib.resources import files
 
 
-def build(target: str, params: object = None) -> None:
-    """Build a container image."""
-    abssetup = files('fontquery.scripts').joinpath('fontquery-setup.sh')
-    setuppath = str(abssetup.parent)
-    setup = str(abssetup.name)
-    cmdline = [
-        'buildah', 'build', '-f', str(files('fontquery.data').joinpath('Containerfile')), '--build-arg',
-        'release={}'.format(params.release), '--build-arg',
-        'setup={}'.format(setup), '--target', target, '-t',
-        'ghcr.io/fedora-i18n/fontquery/fedora/{}:{}'.format(target,
-                                                            params.release), setuppath
-    ]
-    if params.verbose:
-        print('# ' + ' '.join(cmdline))
-    if not params.try_run:
-        subprocess.run(cmdline)
+class ContainerImage:
+    """Image Builder"""
 
+    def __init__(self, platform: str, version: str, verbose: bool = False):
+        self.__platform = platform
+        self.__version = version
+        self.__target = None
+        self.__verbose = verbose
 
-def push(target: str, params: object = None) -> None:
-    """Publish a container image."""
-    cmdline = [
-        'buildah', 'push',
-        'ghcr.io/fedora-i18n/fontquery/fedora/{}:{}'.format(target, params.release)
-    ]
-    if params.verbose:
-        print('# ' + ' '.join(cmdline))
-    if not params.try_run:
-        subprocess.run(cmdline)
+    def _get_namespace(self) -> str:
+        if not self.__target:
+            raise RuntimeError('No target is set')
+        return 'fontquery/{}/{}:{}'.format(self.__platform, self.__target, self.__version)
 
+    @property
+    def target(self) -> str:
+        return self.__target
 
-def clean(target: str, params: object = None) -> None:
-    """Clean up container images."""
-    cmdline = [
-        'buildah', 'rmi',
-        'ghcr.io/fedora-i18n/fontquery/fedora/{}:{}'.format(target, params.release)
-    ]
-    if params.verbose:
-        print('# ' + ' '.join(cmdline))
-    if not params.try_run:
-        subprocess.run(cmdline)
+    @target.setter
+    def target(self, v: str) -> None:
+        self.__target = v
+
+    def exists(remote = True) -> bool:
+        """Whether the image is available or not"""
+        if not remote:
+            cmdline = [
+                'buildah', 'images', 'ghcr.io/fedora-i18n/{}'.format(self._get_namespace())
+            ]
+        else:
+            cmdline = [
+                'buildah', 'pull', 'ghcr.io/fedora-i18n/{}'.format(self._get_namespace())
+            ]
+        if self.__verbose:
+            print('# ' + ' '.join(cmdline), file=sys.stderr)
+        try:
+            subprocess.run(cmdline, check=True)
+        except subprocess.CalledProcessError:
+            return False
+        return True
+
+    def build(self, *args, **kwargs) -> None:
+        """Build an image"""
+        if self.exists(remote=False):
+            print('Warning: {} is already available on local. You may want to remove older images manually.'.format(self._get_namespace()), file=sys.stderr)
+        abssetup = files('fontquery.scripts').joinpath('fontquery-setup.sh')
+        setuppath = str(abssetup.parent)
+        setup = str(abssetup.name)
+        cmdline = [
+            'buildah', 'build', '-f', str(files('fontquery.data').joinpath('Containerfile.base')),
+            '--build-arg', 'release={}'.format(self.__version),
+            '--build-arg', 'setup={}'.format(setup),
+            '--target', self.target, '-t',
+            'ghcr.io/fedora-i18n/{}'.format(self._get_namespace()),
+            setuppath
+        ]
+        if self.__verbose:
+            print('# ' + ' '.join(cmdline))
+        if not ('try_run' in kwargs and kwargs['try_run']):
+            subprocess.run(cmdline)
+
+    def update(self, *args, **kwargs) -> None:
+        """Update an image"""
+        if not self.exists(remote=True):
+            raise RuntimeError("Image isn't yet available. try build first: {}".format(self._get_namespace()))
+        abssetup = files('fontquery.scripts').joinpath('fontquery-setup.sh')
+        setuppath = str(abssetup.parent)
+        setup = str(abssetup.name)
+
+    def clean(self, *args, **kwargs) -> None:
+        """Clean up an image"""
+        if not self.exists(remote=False):
+            print("Warning: {} isn't available on local. You don't need to clean up.".format(self._get_namespace()), file=sys.stderr)
+            return
+        cmdline = [
+            'buildah', 'rmi',
+            'ghcr.io/fedora-i18n/{}'.format(self._get_namespace())
+        ]
+        if self.__verbose:
+            print('# ' + ' '.join(cmdline))
+        if not ('try_run' in kwargs and kwargs['try_run']):
+            subprocess.run(cmdline)
+
+    def push(self, *args, **kwargs) -> None:
+        """Publish an image to registry"""
+        if not self.exists(remote=False):
+            print("Warning: {} isn't available on local.".format(self._get_namespace()))
+            return
+        cmdline = [
+            'buildah', 'push',
+            'ghcr.io/fedora-i18n/{}'.format(self._get_namespace())
+        ]
+        if self.__verbose:
+            print('# ' + ' '.join(cmdline))
+        if not ('try_run' in kwargs and kwargs['try_run']):
+            subprocess.run(cmdline)
 
 
 def main():
@@ -97,6 +152,10 @@ def main():
     parser.add_argument('--try-run',
                         action='store_true',
                         help='Do not take any actions')
+    parser.add_argument('-u',
+                        '--update',
+                        action='store_true',
+                        help='Do the incremental update')
     parser.add_argument('-v',
                         '--verbose',
                         action='store_true',
@@ -112,23 +171,39 @@ def main():
         print('buildah is not installed')
         sys.exit(1)
 
+    bldr = ContainerImage('fedora', args.release, args.verbose)
+    if args.update and args.rmi:
+        print('Warning: --rmi and --update option are conflict each other. Disabling --rmi.')
+        args.rmi = False
+    if args.skip_build and args.update:
+        print('Warning: --skip-build and --update option are conflict each other. Disabling --update.')
+        args.update = False
     if args.target:
+        bldr.target = args.target
         if not args.skip_build:
             if args.rmi:
-                clean(args.target, args)
-            build(args.target, args)
+                bldr.clean(args)
+            if args.update:
+                bldr.update(args)
+            else:
+                bldr.build(args)
         if args.push:
-            push(args.target, args)
+            bldr.push(args)
     else:
         target = ['minimal', 'extra', 'all']
         if not args.skip_build:
             for t in target:
+                bldr.target = t
                 if args.rmi:
-                    clean(t, args)
-                build(t, args)
+                    bldr.clean(args)
+                if args.update:
+                    bldr.update(args)
+                else:
+                    bldr.build(args)
         if args.push:
             for t in target:
-                push(t, args)
+                bldr.target = t
+                bldr.push(args)
 
 
 if __name__ == '__main__':
