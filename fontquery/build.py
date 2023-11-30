@@ -93,8 +93,8 @@ class ContainerImage:
                 # Use all files from development
                 containerfile = str(devpath / 'fontquery' / 'data' / 'Containerfile')
                 abssetup = str(devpath / 'fontquery' / 'scripts' / 'fontquery-setup.sh')
+                shutil.copy2(dist, tmpdir)
             shutil.copy2(abssetup, tmpdir)
-            shutil.copy2(dist, tmpdir)
             cmdline = [
                 'buildah', 'build', '-f', containerfile,
                 '--build-arg', 'release={}'.format(self.__version),
