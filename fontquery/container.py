@@ -129,10 +129,38 @@ def dump(params: object) -> str:
 
     return json.dumps(jsons, indent=4)
 
+def checkupdate(params: object) -> str:
+    if not shutil.which('fontquery-setup.sh'):
+        print('fontquery-setup.sh is not installed')
+        sys.exit(1)
+    cmdline = [
+        'fontquery-setup.sh', '-c'
+    ]
+    if params.verbose:
+        print('# ' + ' '.join(cmdline), flush=True, file=sys.stderr)
+    res = subprocess.run(cmdline)
+    sys.exit(res.returncode)
+
+def update(params: object) -> str:
+    if not shutil.which('fontquery-setup.sh'):
+        print('fontquery-setup.sh is not installed')
+        sys.exit(1)
+    cmdline = [
+        'fontquery-setup.sh', '-u'
+    ]
+    if params.verbose:
+        print('# ' + ' '.join(cmdline), flush=True, file=sys.stderr)
+    res = subprocess.run(cmdline)
+    sys.exit(res.returncode)
 
 def main():
     """Endpoint to execute fontquery-container program."""
-    fccmd = {'fcmatch': 'fc-match', 'fclist': 'fc-list', 'json': dump}
+    fccmd = {'fcmatch': 'fc-match',
+             'fclist': 'fc-list',
+             'json': dump,
+             'update': update,
+             'checkupdate': checkupdate,
+             }
     fclang_ll_cc = [
         'az_az', 'az_ir', 'ber_dz', 'ber_ma', 'ku_am', 'ku_iq', 'ku_ir',
         'ku_tr', 'mn_cn', 'mn_mn', 'pa_pk', 'pap_an', 'pap_aw', 'ps_af',

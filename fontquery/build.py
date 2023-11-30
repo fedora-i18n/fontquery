@@ -23,12 +23,16 @@
 # PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 """Module to build a container image for fontquery."""
 
+import glob
 import sys
 import os
 import argparse
+import importlib.metadata
 import subprocess
 import shutil
+import tempfile
 from importlib.resources import files
+from pathlib import Path
 
 
 class ContainerImage:
@@ -45,6 +49,9 @@ class ContainerImage:
             raise RuntimeError('No target is set')
         return 'fontquery/{}/{}:{}'.format(self.__platform, self.__target, self.__version)
 
+    def _get_fullnamespace(self) -> str:
+        return 'ghcr.io/fedora-i18n/{}'.format(self._get_namespace())
+
     @property
     def target(self) -> str:
         return self.__target
@@ -53,15 +60,15 @@ class ContainerImage:
     def target(self, v: str) -> None:
         self.__target = v
 
-    def exists(remote = True) -> bool:
+    def exists(self, remote = True) -> bool:
         """Whether the image is available or not"""
         if not remote:
             cmdline = [
-                'buildah', 'images', 'ghcr.io/fedora-i18n/{}'.format(self._get_namespace())
+                'buildah', 'images', self._get_fullnamespace()
             ]
         else:
             cmdline = [
-                'buildah', 'pull', 'ghcr.io/fedora-i18n/{}'.format(self._get_namespace())
+                'buildah', 'pull', self._get_fullnamespace()
             ]
         if self.__verbose:
             print('# ' + ' '.join(cmdline), file=sys.stderr)
@@ -75,21 +82,32 @@ class ContainerImage:
         """Build an image"""
         if self.exists(remote=False):
             print('Warning: {} is already available on local. You may want to remove older images manually.'.format(self._get_namespace()), file=sys.stderr)
-        abssetup = files('fontquery.scripts').joinpath('fontquery-setup.sh')
-        setuppath = str(abssetup.parent)
-        setup = str(abssetup.name)
-        cmdline = [
-            'buildah', 'build', '-f', str(files('fontquery.data').joinpath('Containerfile.base')),
-            '--build-arg', 'release={}'.format(self.__version),
-            '--build-arg', 'setup={}'.format(setup),
-            '--target', self.target, '-t',
-            'ghcr.io/fedora-i18n/{}'.format(self._get_namespace()),
-            setuppath
-        ]
-        if self.__verbose:
-            print('# ' + ' '.join(cmdline))
-        if not ('try_run' in kwargs and kwargs['try_run']):
-            subprocess.run(cmdline)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            abssetup = files('fontquery.scripts').joinpath('fontquery-setup.sh')
+            setup = str(abssetup.name)
+            devpath = Path(__file__).parents[1]
+            sdist = str(devpath / 'dist' / 'fontquery-{}*.whl'.format(importlib.metadata.version('fontquery')))
+            dist = '' if not 'debug' in kwargs or not kwargs['debug'] else glob.glob(sdist)[0]
+            containerfile = str(files('fontquery.data').joinpath('Containerfile'))
+            if dist:
+                # Use all files from development
+                containerfile = str(devpath / 'fontquery' / 'data' / 'Containerfile')
+                abssetup = str(devpath / 'fontquery' / 'scripts' / 'fontquery-setup.sh')
+            shutil.copy2(abssetup, tmpdir)
+            shutil.copy2(dist, tmpdir)
+            cmdline = [
+                'buildah', 'build', '-f', containerfile,
+                '--build-arg', 'release={}'.format(self.__version),
+                '--build-arg', 'setup={}'.format(setup),
+                '--build-arg', 'dist={}'.format(Path(dist).name),
+                '--target', self.target, '-t',
+                'ghcr.io/fedora-i18n/{}'.format(self._get_namespace()),
+                tmpdir
+            ]
+            if self.__verbose:
+                print('# ' + ' '.join(cmdline))
+            if not ('try_run' in kwargs and kwargs['try_run']):
+                subprocess.run(cmdline, cwd=tmpdir)
 
     def update(self, *args, **kwargs) -> None:
         """Update an image"""
@@ -98,6 +116,46 @@ class ContainerImage:
         abssetup = files('fontquery.scripts').joinpath('fontquery-setup.sh')
         setuppath = str(abssetup.parent)
         setup = str(abssetup.name)
+        cname = 'fontquery-{}'.format(os.getpid())
+        cmdline = [
+            'podman', 'run', '-ti', '--name', cname,
+            self._get_fullnamespace(),
+            '-m', 'checkupdate'
+        ]
+        cleancmdline = [
+            'podman', 'rm', cname
+        ]
+        if self.__verbose:
+            print('# ' + ' '.join(cmdline))
+        if not ('try_run' in kwargs and kwargs['try_run']):
+            try:
+                res = subprocess.run(cmdline)
+                if res.returncode != 0:
+                    subprocess.run(cleancmdline)
+                    cmdline[-1] = 'update'
+                    if self.__verbose:
+                        print('# ' + ' '.join(cmdline))
+                    res = subprocess.run(cmdline)
+                    if res.returncode == 0:
+                        cmdline = [
+                            'podman', 'commit', cname,
+                            self._get_fullnamespace()
+                        ]
+                        res = subprocess.run(cmdline)
+                        if res.returncode == 0:
+                            print('** Image has been changed.')
+                        else:
+                            print('** Failed to change image.')
+                            sys.exit(1)
+                    else:
+                        print('** Updating image failed.')
+                        sys.exit(1)
+                else:
+                    print('** No updates available')
+            finally:
+                if self.__verbose:
+                    print('# ' + ' '.join(cleancmdline))
+                subprocess.run(cleancmdline)
 
     def clean(self, *args, **kwargs) -> None:
         """Clean up an image"""
@@ -133,6 +191,10 @@ def main():
     parser = argparse.ArgumentParser(
         description='Build fontquery image',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-d',
+                        '--debug',
+                        action='store_true',
+                        help=argparse.SUPPRESS)
     parser.add_argument('-r',
                         '--release',
                         default='rawhide',
@@ -182,28 +244,28 @@ def main():
         bldr.target = args.target
         if not args.skip_build:
             if args.rmi:
-                bldr.clean(args)
+                bldr.clean(**vars(args))
             if args.update:
-                bldr.update(args)
+                bldr.update(**vars(args))
             else:
-                bldr.build(args)
+                bldr.build(**vars(args))
         if args.push:
-            bldr.push(args)
+            bldr.push(**vars(args))
     else:
         target = ['minimal', 'extra', 'all']
         if not args.skip_build:
             for t in target:
                 bldr.target = t
                 if args.rmi:
-                    bldr.clean(args)
+                    bldr.clean(**vars(args))
                 if args.update:
-                    bldr.update(args)
+                    bldr.update(**vars(args))
                 else:
-                    bldr.build(args)
+                    bldr.build(**vars(args))
         if args.push:
             for t in target:
                 bldr.target = t
-                bldr.push(args)
+                bldr.push(**vars(args))
 
 
 if __name__ == '__main__':
