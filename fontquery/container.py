@@ -231,6 +231,8 @@ def main():
                   file=sys.stderr)
             sys.exit(1)
 
+        if args.lang != fclangs:
+            print('W: lang option does not take any effects. Please use :lang fcpattern instead', flush=True, file=sys.stderr)
         cmdline = [fccmd[args.mode]] + args.args
         if args.verbose:
             print('# ' + ' '.join(cmdline), flush=True, file=sys.stderr)
