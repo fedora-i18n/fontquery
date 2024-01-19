@@ -181,8 +181,12 @@ class HtmlRenderer(DataRenderer):
             vv = diffdata[k][kk]
             for a in aliases:
                 if vv[0][a]['family'] == vv[1][a]['family']:
-                    diff.append(None)
-                    attr = 'rowspan="2"'
+                    if vv[0][a]['file'] == v[1][a]['file']:
+                        diff.append(None)
+                        attr = 'rowspan="2"'
+                    else:
+                        diff.append(vv[1][a])
+                        attr = 'class="original"'
                 else:
                     diff.append(vv[1][a])
                     attr = 'class="original"'
@@ -196,7 +200,10 @@ class HtmlRenderer(DataRenderer):
                 if x is None:
                     pass
                 else:
-                    line.append('<td class="diff">{}</td>'.format(x['family']))
+                    line.append('<td class="diff" title="{title}">{family}</td>'.format(**{
+                        'family': x['family'],
+                        'title': x['file']
+                    }))
             tables.append('\n'.join(line))
 
         header = [
@@ -425,8 +432,12 @@ class TextRenderer(DataRenderer):
             vv = diffdata[k][kk]
             for a in aliases:
                 if vv[0][a]['family'] == vv[1][a]['family']:
-                    diffcol.append(ColoredText(''))
-                    origcol.append(ColoredText(vv[0][a]['family']))
+                    if vv[0][a]['file'] == vv[1][a]['file']:
+                        diffcol.append(ColoredText(''))
+                        origcol.append(ColoredText(vv[0][a]['family']))
+                    else:
+                        diffcol.append(ColoredText('≈' + ' (' + vv[1][a]['file'] + ')', 'green'))
+                        origcol.append(ColoredText(vv[0][a]['family'] + ' (' + vv[0][a]['file'] + ')', 'red'))
                 else:
                     diffcol.append(ColoredText(vv[1][a]['family'], 'green'))
                     origcol.append(ColoredText(vv[0][a]['family'], 'red'))
