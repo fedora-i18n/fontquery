@@ -367,15 +367,17 @@ class TextRenderer(DataRenderer):
     def format_line(cls, column: list[ColoredText]) -> Iterator[str]:
         l = []
         retval = ''
+        colsize = int(os.get_terminal_size().columns / len(column))
+        colsize = 15 if colsize <= 15 else colsize
         for i, s in enumerate(column):
             n = len(s)
-            s = s.cstr() + ' '*(15-n)
+            s = s.cstr() + ' '*(colsize-n)
             l.append(s)
-            if n >= 16:
+            if n >= colsize + 1:
                 yield ' '.join(l)
                 l = []
                 for n in range(i+1):
-                    l.append(' '*15)
+                    l.append(' '*colsize)
         retval = ' '.join(l)
         if retval.strip():
             yield retval
