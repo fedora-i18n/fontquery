@@ -30,7 +30,12 @@ import markdown
 import os
 import re
 import sys
-from termcolor import colored
+try:
+    from termcolor import colored
+except ModuleNotFoundError:
+    print('* Disabling color support due to missing dependencies', file=sys.stderr)
+    def colored(s, *args, **kwargs):
+        return str(s)
 from typing import Any, IO, Iterator
 
 class DataRenderer:
