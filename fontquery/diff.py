@@ -77,22 +77,19 @@ def load_json(release, args, fcache):
     else:
         fqc = FontQueryCache('fedora', release, args.target)
         if fcache:
-            try:
-                fn = fqc.filename
-                with open(fn) as f:
-                    out = f.read()
-                    if args.verbose:
-                        print('* Reading JSON from cache', file=sys.stderr)
-            except FileNotFoundError:
-                pass
+            if args.verbose:
+                print('* Reading JSON from cache', file=sys.stderr)
+            out = fqc.read()
         if not out:
             out = get_json(release, args)
             if args.verbose:
                 print('* Storing cache...', file=sys.stderr)
-            with open(fqc.filename, 'w') as f:
-                f.write(out)
-            if args.verbose:
-                print('done', file=sys.stderr)
+            if fqc.save(out):
+                if args.verbose:
+                    print('done', file=sys.stderr)
+            else:
+                if args.verbose:
+                    print('failed', file=sys.stderr)
 
     return out
 

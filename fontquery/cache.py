@@ -40,3 +40,29 @@ class FontQueryCache:
         ]
 
         return tag
+
+    def read(self) -> str:
+        fn = None
+        out = None
+        try:
+            fn = self.filename
+        except RuntimeError:
+            return None
+        try:
+            with open(fn) as f:
+                out = f.read()
+        except FileNotFoundError:
+            pass
+
+        return out
+
+    def save(self, s):
+        fn = None
+        try:
+            fn = self.filename
+        except RuntimeError:
+            return False
+        with open(fn, 'w') as f:
+            f.write(s)
+
+        return True
