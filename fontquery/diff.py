@@ -40,8 +40,61 @@ try:
 except ModuleNotFoundError:
     local_not_supported = True
 from fontquery import htmlformatter # noqa: F401
+from fontquery.cache import FontQueryCache # noqa: F401
 from pathlib import Path
 from xdg import BaseDirectory
+
+def get_json(release, args):
+    if release == 'local':
+        cmdline = ['fontquery-container', '-m', 'json'] + (
+            ['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
+            else []) + ([] if args.lang is None else
+                        [' '.join(['-l ' + ls
+                                   for ls in args.lang])]) + (args.query if args.query else [])
+    else:
+        print('This may take some time...', file=sys.stderr)
+        cmdline = [
+            'podman', 'run', '--rm',
+            'ghcr.io/fedora-i18n/fontquery/fedora/{}:{}'.format(
+                args.target, release), '-m', 'json'
+        ] + (['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
+             else []) + ([] if args.lang is None else
+                         [' '.join(['-l ' + ls
+                                    for ls in args.lang])]) + (args.query if args.query else [])
+
+    if args.verbose:
+        print('# ' + ' '.join(cmdline), file=sys.stderr)
+
+    out = subprocess.run(cmdline, stdout=subprocess.PIPE).stdout.decode('utf-8')
+
+    return out
+
+def load_json(release, args, fcache):
+    out = None
+
+    if release == 'local':
+        out = get_json(release, args)
+    else:
+        fqc = FontQueryCache('fedora', release, args.target)
+        if fcache:
+            try:
+                fn = fqc.filename
+                with open(fn) as f:
+                    out = f.read()
+                    if args.verbose:
+                        print('* Reading JSON from cache', file=sys.stderr)
+            except FileNotFoundError:
+                pass
+        if not out:
+            out = get_json(release, args)
+            if args.verbose:
+                print('* Storing cache...', file=sys.stderr)
+            with open(fqc.filename, 'w') as f:
+                f.write(out)
+            if args.verbose:
+                print('done', file=sys.stderr)
+
+    return out
 
 def main():
     """Endpoint to execute fontquery diff program."""
@@ -54,10 +107,6 @@ def main():
     parser.add_argument('--disable-cache',
                         action='store_true',
                         help='Enforce processing everything even if not updating')
-    parser.add_argument('-r',
-                        '--release',
-                        default='rawhide',
-                        help='Release number such as "rawhide" and "39".')
     parser.add_argument('-l',
                         '--lang',
                         action='append',
@@ -66,6 +115,9 @@ def main():
                         type=argparse.FileType('w'),
                         default='-',
                         help='Output file')
+    parser.add_argument('-q', '--query',
+                        action='append',
+                        help='Query string to fontquery instance')
     parser.add_argument('-R', '--render',
                         default='text',
                         choices=renderer.keys())
@@ -79,61 +131,28 @@ def main():
                         action='count',
                         default=0,
                         help='Show more detailed logs')
-    parser.add_argument('args', nargs='*', help='Queries')
+    parser.add_argument('compare_a', nargs='?', help='Release to compare',
+                        default='rawhide')
+    parser.add_argument('compare_b', nargs='?', help='Release to compare',
+                        default='local')
 
     args = parser.parse_args()
     if local_not_supported:
         raise TypeError('local query feature is not available.')
     if not shutil.which('podman'):
-        print('podman is not installed')
+        print('podman is not installed', file=sys.stderr)
         sys.exit(1)
 
-    cache = None
-    out = None
-    retval_a = None
-    if not args.lang:
-        cachedir = BaseDirectory.save_cache_path('fontquery')
-        cache = Path(cachedir) / 'fedora-{}-{}.json'.format(args.release, args.target)
-        try:
-            with open(cache) as f:
-                out = f.read()
-        except FileNotFoundError:
-            pass
-    if args.disable_cache or not cache or not cache.exists():
-        print('This may take some time...', file=sys.stderr)
-        cmdline = [
-            'podman', 'run', '--rm',
-            'ghcr.io/fedora-i18n/fontquery/fedora/{}:{}'.format(
-                args.target, args.release), '-m', 'json'
-        ] + (['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
-             else []) + ([] if args.lang is None else
-                         [' '.join(['-l ' + ls
-                                    for ls in args.lang])]) + args.args
-        if args.verbose:
-            print('# ' + ' '.join(cmdline))
-
-        retval_a = subprocess.run(cmdline, stdout=subprocess.PIPE)
-        out = retval_a.stdout.decode('utf-8')
-
-    cmdline = ['fontquery-container', '-m', 'json'] + (
-        ['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
-        else []) + ([] if args.lang is None else
-                    [' '.join(['-l ' + ls
-                               for ls in args.lang])]) + args.args
-    if args.verbose:
-        print('# ' + ' '.join(cmdline))
-
-    retval_b = subprocess.run(cmdline, stdout=subprocess.PIPE)
+    retval_a = load_json(args.compare_a, args,
+                         not args.disable_cache or not args.lang)
+    retval_b = load_json(args.compare_b, args,
+                         not args.disable_cache or not args.lang)
 
     with args.output:
         for s in htmlformatter.generate_diff(renderer[args.render](), '',
-                                             json.loads(out),
-                                             json.loads(retval_b.stdout.decode('utf-8'))):
+                                             json.loads(retval_a),
+                                             json.loads(retval_b)):
             args.output.write(s)
-
-    if cache and retval_a:
-        with open(cache, 'w') as f:
-            f.write(out)
 
 if __name__ == '__main__':
     main()
