@@ -66,3 +66,6 @@ class FontQueryCache:
             f.write(s)
 
         return True
+
+    def delete(self):
+        self.filename.unlink(missing_ok=False)
