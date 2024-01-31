@@ -76,20 +76,23 @@ def load_json(release, args, fcache):
         out = get_json(release, args)
     else:
         fqc = FontQueryCache('fedora', release, args.target)
+        if args.clean_cache:
+            fqc.delete()
         if fcache:
             if args.verbose:
                 print('* Reading JSON from cache', file=sys.stderr)
             out = fqc.read()
         if not out:
             out = get_json(release, args)
-            if args.verbose:
-                print('* Storing cache...', file=sys.stderr)
-            if fqc.save(out):
+            if fcache:
                 if args.verbose:
-                    print('done', file=sys.stderr)
-            else:
-                if args.verbose:
-                    print('failed', file=sys.stderr)
+                    print('* Storing cache...', file=sys.stderr, end='')
+                if fqc.save(out):
+                    if args.verbose:
+                        print('done', file=sys.stderr)
+                else:
+                    if args.verbose:
+                        print('failed', file=sys.stderr)
 
     return out
 
@@ -101,6 +104,10 @@ def main():
     parser = argparse.ArgumentParser(
         description='Show difference between local and reference',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-C',
+                        '--clean-cache',
+                        action='store_true',
+                        help='Clean up caches before processing')
     parser.add_argument('--disable-cache',
                         action='store_true',
                         help='Enforce processing everything even if not updating')
@@ -141,9 +148,9 @@ def main():
         sys.exit(1)
 
     retval_a = load_json(args.compare_a, args,
-                         not args.disable_cache or not args.lang)
+                         not args.disable_cache and not args.lang)
     retval_b = load_json(args.compare_b, args,
-                         not args.disable_cache or not args.lang)
+                         not args.disable_cache and not args.lang)
 
     with args.output:
         for s in htmlformatter.generate_diff(renderer[args.render](), '',
