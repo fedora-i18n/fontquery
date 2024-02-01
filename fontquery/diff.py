@@ -103,7 +103,7 @@ def main():
                 'text': htmlformatter.TextRenderer}
 
     parser = argparse.ArgumentParser(
-        description='Show difference between local and reference',
+        description='Show difference between releases',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-C',
                         '--clean-cache',

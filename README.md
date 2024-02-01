@@ -32,14 +32,18 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
+  -C, --clean-cache     Clean caches before processing (default: False)
+  --disable-cache       Enforce processing everything even if not updating (default: False)
   -r RELEASE, --release RELEASE
-                        Release number (default: rawhide)
+                        Release number such as "rawhide" and "39". "local" to query from current environment
+                        instead of images (default: local)
   -l LANG, --lang LANG  Language list to dump fonts data into JSON (default: None)
   -m {fcmatch,fclist,json}, --mode {fcmatch,fclist,json}
                         Action to perform for query (default: fcmatch)
   -t {minimal,extra,all}, --target {minimal,extra,all}
                         Query fonts from (default: minimal)
   -v, --verbose         Show more detailed logs (default: 0)
+  -V, --version         Show version (default: False)
 ```
 
 To query sans-serif for Hindi on Fedora 36,
@@ -65,7 +69,7 @@ $ fontquery -m json -t langpacks | fq2html -o langpacks.html -
 To check difference between local and reference:
 
 ``` shell
-$ fontquery-diff -r 39 -R text
+$ fontquery-diff -R text rawhide local
 ```
 
 ## For developers
