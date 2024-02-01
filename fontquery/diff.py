@@ -145,10 +145,11 @@ def main():
         sys.exit(1)
 
     if args.verbose:
-        print('* Compare from: {}'.format(args.compare_a))
-        print('* Compare to: {}'.format(args.compare_b))
-        print('* Target: {}'.format(args.target))
-        print('* Language: {}'.format(args.lang))
+        print('* Target: {}'.format(args.target), file=sys.stderr)
+        print('* Language: {}'.format(args.lang), file=sys.stderr)
+        print(file=sys.stderr)
+
+    print('* Comparison between {} and {}'.format(args.compare_a, args.compare_b), file=sys.stderr)
 
     retval_a = load_json(args.compare_a, args,
                          not args.disable_cache and not args.lang)
