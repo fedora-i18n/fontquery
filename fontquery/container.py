@@ -36,7 +36,7 @@ import os
 from collections import Counter
 from pathlib import Path
 try:
-    import _debugpath # noqa: F401
+    import fontquery_debug # noqa: F401
 except ModuleNotFoundError:
     pass
 from fontquery import version

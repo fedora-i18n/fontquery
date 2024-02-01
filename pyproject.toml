@@ -43,6 +43,7 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 namespaces = true
+exclude = [ "fontquery_debug" ]
 
 [tool.setuptools.package-data]
 fontquery = [ "version.txt" ]

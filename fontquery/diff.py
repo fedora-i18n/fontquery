@@ -31,7 +31,7 @@ import subprocess
 import sys
 import warnings
 try:
-    import _debugpath # noqa: F401
+    import fontquery_debug # noqa: F401
 except ModuleNotFoundError:
     pass
 try:
