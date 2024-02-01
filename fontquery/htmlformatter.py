@@ -25,6 +25,7 @@
 
 import argparse
 import atexit
+import importlib.metadata
 import json
 import markdown
 import os
@@ -585,12 +586,20 @@ def main():
     parser.add_argument('-R', '--render',
                         default='html',
                         choices=renderer.keys())
+    parser.add_argument('-V',
+                        '--version',
+                        action='store_true',
+                        help='Show version')
     parser.add_argument('FILE',
                         type=argparse.FileType('r'),
                         help='JSON file to read or - to read from stdin')
 
     args = parser.parse_args()
     atexit.register(args.FILE.close)
+
+    if args.version:
+        print(importlib.metadata.version('fontquery'))
+        sys.exit(0)
 
     data = None
     with args.FILE:

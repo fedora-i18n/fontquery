@@ -222,9 +222,16 @@ def main():
                         '--verbose',
                         action='store_true',
                         help='Show more detailed logs')
+    parser.add_argument('-V',
+                        '--version',
+                        action='store_true',
+                        help='Show version')
 
     args = parser.parse_args()
 
+    if args.version:
+        print(importlib.metadata.version('fontquery'))
+        sys.exit(0)
     if not os.path.isfile(files('fontquery.data').joinpath('Containerfile')):
         print('Containerfile is missing')
         sys.exit(1)

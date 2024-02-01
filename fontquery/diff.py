@@ -24,6 +24,7 @@
 """Module to perform a diff application for fontquery."""
 
 import argparse
+import importlib.metadata
 import json
 import os
 import shutil
@@ -132,12 +133,19 @@ def main():
                         action='count',
                         default=0,
                         help='Show more detailed logs')
+    parser.add_argument('-V',
+                        '--version',
+                        action='store_true',
+                        help='Show version')
     parser.add_argument('compare_a', nargs='?', help='Release to compare',
                         default='rawhide')
     parser.add_argument('compare_b', nargs='?', help='Release to compare',
                         default='local')
 
     args = parser.parse_args()
+    if args.version:
+        print(importlib.metadata.version('fontquery'))
+        sys.exit(0)
     if local_not_supported:
         raise TypeError('local query feature is not available.')
     if not shutil.which('podman'):

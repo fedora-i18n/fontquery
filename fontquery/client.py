@@ -24,6 +24,7 @@
 """Module to perform a client application for fontquery."""
 
 import argparse
+import importlib.metadata
 import os
 import shutil
 import subprocess
@@ -128,12 +129,19 @@ def main():
                         action='count',
                         default=0,
                         help='Show more detailed logs')
+    parser.add_argument('-V',
+                        '--version',
+                        action='store_true',
+                        help='Show version')
     parser.add_argument('args', nargs='*', help='Queries')
 
     args = parser.parse_args()
     cache = None
     cmdline = []
     out = None
+    if args.version:
+        print(importlib.metadata.version('fontquery'))
+        sys.exit(0)
     if args.verbose:
         print('* Release: {}'.format(args.release), file=sys.stderr)
         print('* Target: {}'.format(args.target), file=sys.stderr)
