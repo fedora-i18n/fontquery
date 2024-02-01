@@ -11,10 +11,24 @@ fontquery is a tool to query fonts in the certain Fedora release.
 $ pip3 install fontquery
 ```
 
+Or in Fedora,
+
+``` shell
+# dnf install fontquery
+```
+
 ## How to install from git
 
 ``` shell
 $ pip3 install --user build wheel
+$ python3 -m build
+$ pip3 install --user dist/fontquery*.whl
+```
+
+Or in Fedora,
+
+``` shell
+# dnf install python3-build python3-wheel
 $ python3 -m build
 $ pip3 install --user dist/fontquery*.whl
 ```
