@@ -48,7 +48,7 @@ def run(release, args):
         cmdline = ['fontquery-container', '-m', args.mode] + (
             ['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
             else []) + ([] if args.lang is None else
-                        [' '.join(['-l ' + ls
+                        [' '.join(['-l=' + ls
                                    for ls in args.lang])]) + args.args
     else:
         print('* This may take some time...', file=sys.stderr)
@@ -58,7 +58,7 @@ def run(release, args):
                 args.target, args.release), '-m', args.mode
         ] + (['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
              else []) + ([] if args.lang is None else
-                         [' '.join(['-l ' + ls
+                         [' '.join(['-l=' + ls
                                     for ls in args.lang])]) + args.args
 
     if args.verbose:

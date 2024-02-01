@@ -49,18 +49,18 @@ def get_json(release, args):
         cmdline = ['fontquery-container', '-m', 'json'] + (
             ['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
             else []) + ([] if args.lang is None else
-                        [' '.join(['-l ' + ls
-                                   for ls in args.lang])]) + (args.query if args.query else [])
+                        [' '.join(['-l=' + ls
+                                   for ls in args.lang])])
     else:
-        print('This may take some time...', file=sys.stderr)
+        print('* This may take some time...', file=sys.stderr)
         cmdline = [
             'podman', 'run', '--rm',
             'ghcr.io/fedora-i18n/fontquery/fedora/{}:{}'.format(
                 args.target, release), '-m', 'json'
         ] + (['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
              else []) + ([] if args.lang is None else
-                         [' '.join(['-l ' + ls
-                                    for ls in args.lang])]) + (args.query if args.query else [])
+                         [' '.join(['-l=' + ls
+                                    for ls in args.lang])])
 
     if args.verbose:
         print('# ' + ' '.join(cmdline), file=sys.stderr)
@@ -119,9 +119,6 @@ def main():
                         type=argparse.FileType('w'),
                         default='-',
                         help='Output file')
-    parser.add_argument('-q', '--query',
-                        action='append',
-                        help='Query string to fontquery instance')
     parser.add_argument('-R', '--render',
                         default='text',
                         choices=renderer.keys())
@@ -146,6 +143,12 @@ def main():
     if not shutil.which('podman'):
         print('podman is not installed', file=sys.stderr)
         sys.exit(1)
+
+    if args.verbose:
+        print('* Compare from: {}'.format(args.compare_a))
+        print('* Compare to: {}'.format(args.compare_b))
+        print('* Target: {}'.format(args.target))
+        print('* Language: {}'.format(args.lang))
 
     retval_a = load_json(args.compare_a, args,
                          not args.disable_cache and not args.lang)
