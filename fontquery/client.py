@@ -38,15 +38,70 @@ try:
     local_not_supported = False
 except ModuleNotFoundError:
     local_not_supported = True
+from fontquery.cache import FontQueryCache # noqa: F401
 from pathlib import Path
 from xdg import BaseDirectory
 
+
+def run(release, args):
+    if release == 'local':
+        cmdline = ['fontquery-container', '-m', args.mode] + (
+            ['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
+            else []) + ([] if args.lang is None else
+                        [' '.join(['-l ' + ls
+                                   for ls in args.lang])]) + args.args
+    else:
+        print('* This may take some time...', file=sys.stderr)
+        cmdline = [
+            'podman', 'run', '--rm',
+            'ghcr.io/fedora-i18n/fontquery/fedora/{}:{}'.format(
+                args.target, args.release), '-m', args.mode
+        ] + (['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
+             else []) + ([] if args.lang is None else
+                         [' '.join(['-l ' + ls
+                                    for ls in args.lang])]) + args.args
+
+    if args.verbose:
+        print('# ' + ' '.join(cmdline), file=sys.stderr)
+
+    return subprocess.run(cmdline, stdout=subprocess.PIPE).stdout.decode('utf-8')
+
+def load(release, args, fcache):
+    out = None
+
+    if release == 'local':
+        out = run(release, args)
+    else:
+        fqc = FontQueryCache('fedora', release, args.target)
+        if args.clean_cache:
+            fqc.delete()
+        if fcache:
+            if args.verbose:
+                print('* Reading JSON from cache', file=sys.stderr)
+            out = fqc.read()
+        if not out:
+            out = run(release, args)
+            if fcache:
+                if args.verbose:
+                    print('* Storing cache...', file=sys.stderr, end='')
+                if fqc.save(out):
+                    if args.verbose:
+                        print('done', file=sys.stderr)
+                else:
+                    if args.verbose:
+                        print('failed', file=sys.stderr)
+
+    return out
 
 def main():
     """Endpoint to execute fontquery client program."""
     parser = argparse.ArgumentParser(
         description='Query fonts',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-C',
+                        '--clean-cache',
+                        action='store_true',
+                        help='Clean caches before processing')
     parser.add_argument('--disable-cache',
                         action='store_true',
                         help='Enforce processing everything even if not updating')
@@ -79,52 +134,24 @@ def main():
     cache = None
     cmdline = []
     out = None
+    if args.verbose:
+        print('* Release: {}'.format(args.release), file=sys.stderr)
+        print('* Target: {}'.format(args.target), file=sys.stderr)
+        print('* Language: {}'.format(args.lang), file=sys.stderr)
+
     if args.release == 'local':
         if local_not_supported:
             raise TypeError('local query feature is not available.')
         if args.target != parser.get_default('target'):
             warnings.warn("target option won't take any effects on local mode", RuntimeWarning, stacklevel=2)
-        cmdline = ['fontquery-container', '-m', args.mode] + (
-            ['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
-            else []) + ([] if args.lang is None else
-                        [' '.join(['-l ' + ls
-                                   for ls in args.lang])]) + args.args
     else:
         if not shutil.which('podman'):
             print('podman is not installed')
             sys.exit(1)
 
-        if not args.lang and args.mode == 'json':
-            cachedir = BaseDirectory.save_cache_path('fontquery')
-            cache = Path(cachedir) / 'fedora-{}-{}.json'.format(args.release, args.target)
-            try:
-                with open(cache) as f:
-                    out = f.read()
-            except FileNotFoundError:
-                pass
-        if args.disable_cache or not cache or not cache.exists():
-            cmdline = [
-                'podman', 'run', '--rm',
-                'ghcr.io/fedora-i18n/fontquery/fedora/{}:{}'.format(
-                    args.target, args.release), '-m', args.mode
-            ] + (['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
-                 else []) + ([] if args.lang is None else
-                             [' '.join(['-l ' + ls
-                                        for ls in args.lang])]) + args.args
-        else:
-            pass
-
-    if cmdline:
-        if args.verbose:
-            print('# ' + ' '.join(cmdline))
-
-        retval = subprocess.run(cmdline, stdout=subprocess.PIPE)
-        out = retval.stdout.decode('utf-8')
+    out = load(args.release, args, not args.lang and not args.disable_cache and args.mode == 'json')
 
     print(out)
-    if cmdline and cache:
-        with open(cache, 'w') as f:
-            f.write(out)
 
 
 if __name__ == '__main__':
