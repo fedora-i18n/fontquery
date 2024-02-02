@@ -65,7 +65,13 @@ def run(release, args):
     if args.verbose:
         print('# ' + ' '.join(cmdline), file=sys.stderr)
 
-    return subprocess.run(cmdline, stdout=subprocess.PIPE).stdout.decode('utf-8')
+    result = subprocess.run(cmdline, stdout=subprocess.PIPE)
+    if result.returncode != 0:
+        sys.tracebacklimit = 0
+        raise RuntimeError('`podman run\' failed with the error code {}'.format(result.returncode))
+    print(result.returncode)
+
+    return result.stdout.decode('utf-8')
 
 def load(release, args, fcache):
     out = None
