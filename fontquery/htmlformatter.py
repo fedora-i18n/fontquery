@@ -482,10 +482,12 @@ class TextRenderer(DataRenderer):
         yield '\n'.join(out) + '\n'
 
 
-def json2data(data: dict[str, Any]) -> dict[str, dict[str, Any]]:
+def json2data(data: dict[str, Any], ignore_file: bool) -> dict[str, dict[str, Any]]:
     """Restructure JSON format."""
     retval = {}
     for d in data['fonts']:
+        if ignore_file:
+            del d['file']
         key = d['lang_name']
         if key not in retval:
             retval[key] = {}
@@ -529,17 +531,17 @@ def json2langgroupdiff(data: dict[str, Any],
 
 def generate_table(renderer: DataRenderer, title: str, data: dict[str, Any]) -> Iterator[str]:
     """Format data to HTML."""
-    sorteddata = json2data(data)
+    sorteddata = json2data(data, False)
     renderer.title = title
     renderer.imagetype = data['pattern']
     yield from renderer.render_table(sorteddata)
 
 
 def generate_diff(renderer: DataRenderer, title: str, data: dict[str, Any],
-                  diffdata: dict[str, Any]) -> Iterator[str]:
+                  diffdata: dict[str, Any], compare_accurately: bool) -> Iterator[str]:
     """Format difference between two JSONs to HTML."""
-    sorteddata = json2data(data)
-    sorteddiffdata = json2data(diffdata)
+    sorteddata = json2data(data, not compare_accurately)
+    sorteddiffdata = json2data(diffdata, not compare_accurately)
     matched = {}
     notmatched = {}
     missing_b = {}

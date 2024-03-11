@@ -120,6 +120,9 @@ def main():
                         '--lang',
                         action='append',
                         help='Language list to dump fonts data into JSON')
+    parser.add_argument('--loose-comparison',
+                        action='store_true',
+                        help='Do not compare results accurately')
     parser.add_argument('-o', '--output',
                         type=argparse.FileType('w'),
                         default='-',
@@ -171,7 +174,7 @@ def main():
     with args.output:
         g = htmlformatter.generate_diff(renderer[args.render](), '',
                                         json.loads(retval_a),
-                                        json.loads(retval_b))
+                                        json.loads(retval_b), not args.loose_comparison)
         for s in next(g):
             args.output.write(s)
         ret = next(g)
