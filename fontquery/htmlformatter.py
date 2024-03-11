@@ -566,6 +566,29 @@ def generate_diff(renderer: DataRenderer, title: str, data: dict[str, Any],
     yield from renderer.render_diff(langdata, missing_a, missing_b, langdiffdata)
     yield True if not missing_a and not missing_b else False
 
+def run(mode, in1, in2, out, renderer, title):
+    data = None
+    with in1:
+        data = json.load(in1)
+
+    match mode:
+        case 'diff':
+            with in2:
+                diffdata = json.load(in2)
+            with out:
+                g = generate_diff(renderer, title, data, diffdata, True)
+                for s in next(g):
+                    out.write(s)
+                ret = next(g)
+        case 'table':
+            with out:
+                for s in generate_table(renderer, title, data):
+                    out.write(s)
+            ret = True
+        case _:
+            raise RuntimeError('No such mode is supported: ' + mode)
+
+    return ret
 
 def main():
     """Endpoint to execute fq2html program."""
@@ -604,24 +627,10 @@ def main():
         print(importlib.metadata.version('fontquery'))
         sys.exit(0)
 
-    data = None
-    with args.FILE:
-        data = json.load(args.FILE)
+    ret = run('table' if args.diff is None else 'diff',
+              args.FILE, args.diff, args.output, renderer[args.render](), args.title)
 
-    if args.diff is None:
-        with args.output:
-            for s in generate_table(renderer[args.render](), args.title, data):
-                args.output.write(s)
-    else:
-        with args.diff:
-            diffdata = json.load(args.diff)
-
-        with args.output:
-            g = generate_diff(renderer[args.render](), args.title, data, diffdata)
-            for s in next(g):
-                args.output.write(s)
-            ret = next(g)
-        sys.exit(0 if ret else 1)
+    sys.exit(0 if ret else 1)
 
 
 if __name__ == '__main__':
