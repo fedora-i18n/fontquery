@@ -41,9 +41,12 @@ dependencies = [
 "fq2html" = "fontquery.htmlformatter:main"
 "fontquery-diff" = "fontquery.diff:main"
 
+[tool.setuptools]
+include-package-data = false
+
 [tool.setuptools.packages.find]
 namespaces = true
-exclude = [ "fontquery_debug" ]
+exclude = [ "*debug*" ]
 
 [tool.setuptools.package-data]
 fontquery = [ "version.txt" ]
