@@ -169,10 +169,13 @@ def main():
                          not args.disable_cache and not args.lang)
 
     with args.output:
-        for s in htmlformatter.generate_diff(renderer[args.render](), '',
-                                             json.loads(retval_a),
-                                             json.loads(retval_b)):
+        g = htmlformatter.generate_diff(renderer[args.render](), '',
+                                        json.loads(retval_a),
+                                        json.loads(retval_b))
+        for s in next(g):
             args.output.write(s)
+        ret = next(g)
+    sys.exit(0 if ret else 1)
 
 if __name__ == '__main__':
     main()
