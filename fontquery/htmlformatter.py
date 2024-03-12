@@ -284,7 +284,7 @@ class HtmlRenderer(DataRenderer):
                     attr = '.match'
                 else:
                     attr = '.notmatch'
-                    s += '| {} {{ {} }}'.format(data[k][kk]['family'], attr)
+                s += '| {} {{ {} }}'.format(data[k][kk]['family'], attr)
             md.append(s)
 
         header = [
