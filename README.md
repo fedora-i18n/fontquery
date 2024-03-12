@@ -36,7 +36,8 @@ $ pip3 install --user dist/fontquery*.whl
 ## Usage
 
 ```
-usage: fontquery [-h] [-r RELEASE] [-l LANG] [-m {fcmatch,fclist,json}] [-t {comps,langpacks,both,all}] [-v]
+usage: fontquery [-h] [-C] [--disable-cache] [-f FILENAME_FORMAT] [-r RELEASE] [-l LANG]
+                 [-m {fcmatch,fclist,json,html}] [-O OUTPUT_DIR] [-t {minimal,extra,all}] [-T TITLE] [-v] [-V]
                  [args ...]
 
 Query fonts
@@ -48,14 +49,22 @@ options:
   -h, --help            show this help message and exit
   -C, --clean-cache     Clean caches before processing (default: False)
   --disable-cache       Enforce processing everything even if not updating (default: False)
+  -f FILENAME_FORMAT, --filename-format FILENAME_FORMAT
+                        Output filename format. only take effects with --mode=html (default:
+                        {platform}-{release}-{target}.{mode})
   -r RELEASE, --release RELEASE
                         Release number such as "rawhide" and "39". "local" to query from current environment
-                        instead of images (default: local)
+                        instead of images (default: ['local'])
   -l LANG, --lang LANG  Language list to dump fonts data into JSON (default: None)
-  -m {fcmatch,fclist,json}, --mode {fcmatch,fclist,json}
+  -m {fcmatch,fclist,json,html}, --mode {fcmatch,fclist,json,html}
                         Action to perform for query (default: fcmatch)
+  -O OUTPUT_DIR, --output-dir OUTPUT_DIR
+                        Output directory (default: .)
   -t {minimal,extra,all}, --target {minimal,extra,all}
                         Query fonts from (default: minimal)
+  -T TITLE, --title TITLE
+                        Page title format. only take effects with --mode=html (default: {platform} {release}:
+                        {target})
   -v, --verbose         Show more detailed logs (default: 0)
   -V, --version         Show version (default: False)
 ```
@@ -78,6 +87,12 @@ To generate html table:
 
 ``` shell
 $ fontquery -m json -t langpacks | fq2html -o langpacks.html -
+```
+
+Or simply
+
+``` shell
+$ fontquery -m html -t langpacks -r 40
 ```
 
 To check difference between local and reference:
