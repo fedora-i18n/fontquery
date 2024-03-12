@@ -29,11 +29,14 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import warnings
+from collections import Counter
 try:
     import fontquery_debug # noqa: F401
 except ModuleNotFoundError:
     pass
+import fontquery.htmlformatter # noqa: F401
 try:
     from fontquery import container  # noqa: F401
     local_not_supported = False
@@ -46,7 +49,10 @@ from xdg import BaseDirectory
 
 def run(release, args):
     if release == 'local':
-        cmdline = ['fontquery-container', '-m', args.mode] + (
+        fqcexec = 'fontquery-container'
+        if not shutil.which(fqcexec):
+            fqcexec = container.__file__
+        cmdline = ['python', fqcexec, '-m', args.mode] + (
             ['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
             else []) + ([] if args.lang is None else
                         [' '.join(['-l=' + ls
@@ -56,7 +62,7 @@ def run(release, args):
         cmdline = [
             'podman', 'run', '--rm',
             'ghcr.io/fedora-i18n/fontquery/fedora/{}:{}'.format(
-                args.target, args.release), '-m', args.mode
+                args.target, release), '-m', args.mode
         ] + (['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
              else []) + ([] if args.lang is None else
                          [' '.join(['-l=' + ls
@@ -69,7 +75,6 @@ def run(release, args):
     if result.returncode != 0:
         sys.tracebacklimit = 0
         raise RuntimeError('`podman run\' failed with the error code {}'.format(result.returncode))
-    print(result.returncode)
 
     return result.stdout.decode('utf-8')
 
@@ -102,6 +107,8 @@ def load(release, args, fcache):
 
 def main():
     """Endpoint to execute fontquery client program."""
+    defrel = ['local']
+
     parser = argparse.ArgumentParser(
         description='Query fonts',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -112,9 +119,14 @@ def main():
     parser.add_argument('--disable-cache',
                         action='store_true',
                         help='Enforce processing everything even if not updating')
+    parser.add_argument('-f',
+                        '--filename-format',
+                        default='{platform}-{release}-{target}.{mode}',
+                        help='Output filename format. only take effects with --mode=html')
     parser.add_argument('-r',
                         '--release',
-                        default='local',
+                        default=defrel,
+                        action='append',
                         help='Release number such as "rawhide" and "39". "local" to query from current environment instead of images')
     parser.add_argument('-l',
                         '--lang',
@@ -123,13 +135,21 @@ def main():
     parser.add_argument('-m',
                         '--mode',
                         default='fcmatch',
-                        choices=['fcmatch', 'fclist', 'json'],
+                        choices=['fcmatch', 'fclist', 'json', 'html'],
                         help='Action to perform for query')
+    parser.add_argument('-O',
+                        '--output-dir',
+                        default='.',
+                        help='Output directory')
     parser.add_argument('-t',
                         '--target',
                         default='minimal',
                         choices=['minimal', 'extra', 'all'],
                         help='Query fonts from')
+    parser.add_argument('-T',
+                        '--title',
+                        default='{platform} {release}: {target}',
+                        help='Page title format. only take effects with --mode=html')
     parser.add_argument('-v',
                         '--verbose',
                         action='count',
@@ -142,18 +162,30 @@ def main():
     parser.add_argument('args', nargs='*', help='Queries')
 
     args = parser.parse_args()
+    rr = Counter(args.release)
+    rr.subtract(defrel)
+    rellist = list(rr.elements())
+    args.release = rellist if rellist else defrel
+
     cache = None
     cmdline = []
     out = None
+    origmode = args.mode
+    redirect = True if args.mode == 'html' else False
+    if redirect:
+        args.mode = 'json'
     if args.version:
         print(importlib.metadata.version('fontquery'))
         sys.exit(0)
+    ofile = str(Path(args.output_dir) / args.filename_format)
     if args.verbose:
         print('* Release: {}'.format(args.release), file=sys.stderr)
         print('* Target: {}'.format(args.target), file=sys.stderr)
         print('* Language: {}'.format(args.lang), file=sys.stderr)
+        print('* Mode: {}'.format(args.mode), file=sys.stderr)
+        print('* Output: {}'.format(ofile), file=sys.stderr)
 
-    if args.release == 'local':
+    if 'local' in args.release:
         if local_not_supported:
             raise TypeError('local query feature is not available.')
         if args.target != parser.get_default('target'):
@@ -163,9 +195,21 @@ def main():
             print('podman is not installed')
             sys.exit(1)
 
-    out = load(args.release, args, not args.lang and not args.disable_cache and args.mode == 'json')
-
-    print(out)
+    for r in args.release:
+        out = load(r, args, not args.lang and not args.disable_cache and args.mode == 'json')
+        if redirect:
+            tmp = tempfile.NamedTemporaryFile()
+            with open(tmp.name, 'w') as f:
+                f.write(out)
+            with open(tmp.name, 'r') as f:
+                with open(ofile.format(platform='fedora', release=r,
+                                       target=args.target, mode=origmode), 'w') as fw:
+                    fontquery.htmlformatter.run('table', f, None, fw, fontquery.htmlformatter.HtmlRenderer(),
+                                                args.title.format(platform='fedora',
+                                                                  release=r,
+                                                                  target=args.target))
+        else:
+            print(out)
 
 
 if __name__ == '__main__':
