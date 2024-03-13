@@ -198,13 +198,12 @@ def main():
     for r in args.release:
         out = load(r, args, not args.lang and not args.disable_cache and args.mode == 'json')
         if redirect:
-            tmp = tempfile.NamedTemporaryFile()
-            with open(tmp.name, 'w') as f:
-                f.write(out)
-            with open(tmp.name, 'r') as f:
+            with tempfile.NamedTemporaryFile(mode='w+') as tmp:
+                tmp.write(out)
+                tmp.seek(0)
                 with open(ofile.format(platform='fedora', release=r,
                                        target=args.target, mode=origmode), 'w') as fw:
-                    fontquery.htmlformatter.run('table', f, None, fw, fontquery.htmlformatter.HtmlRenderer(),
+                    fontquery.htmlformatter.run('table', tmp, None, fw, fontquery.htmlformatter.HtmlRenderer(),
                                                 args.title.format(platform='fedora',
                                                                   release=r,
                                                                   target=args.target))
