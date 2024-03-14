@@ -1,0 +1,60 @@
+name: "fontquery action"
+description: "Run actions for fontquery to build/push images"
+author: "tagoh"
+inputs:
+  release:
+    description: "Release number to build/push; space-separated array list"
+    required: true
+  target:
+    description: "Target name to build/push"
+    required: true
+  registry_username:
+    description: "Username for registry"
+    required: true
+  registry_password:
+    description: "Password for registry username"
+    required: true
+  registry:
+    description: "Registry to push"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout fontquery
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        git clone https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/fedora-i18n/fontquery
+        cd fontquery
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    - name: Install fontquery
+      run: |
+        pip install build wheel
+        pushd fontquery
+        python -m build
+        pip install dist/fontquery*.whl
+        popd
+        rm -rf fontquery
+    - name: Install dependencies
+      run: sudo apt install podman buildah
+    - name: Log in to ghcr.io
+      uses: redhat-actions/podman-login@v1
+      with:
+        username: ${{ inputs.registry_username }}
+        password: ${{ inputs.registry_password }}
+        registry: ${{ inputs.registry }}
+    - name: Build Images
+      run: |
+        for r in ${{ inputs.release }}; do
+          fontquery-build -r $r -t ${{ inputs.target }} --rmi
+        done
+    - name: Upload Images
+      run: |
+        for r in ${{ inputs.release }}; do
+          fontquery-build -r $r -t ${{ inputs.target }} -s -p
+        done

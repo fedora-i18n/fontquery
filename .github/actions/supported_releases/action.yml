@@ -1,0 +1,15 @@
+name: "Get supported releases for Fedora"
+description: "Run actions to get supported releases for Fedora"
+author: "tagoh"
+outputs:
+  releases:
+    description: "Release number currently supported by Fedora"
+    value: ${{ steps.fedora.outputs.supported_releases }}
+
+  runs:
+    using: "composite"
+    steps:
+      - name: Get supported releases for Fedora
+        id: fedora
+        run: (echo -n "supported_releases=" && curl https://dl.fedoraproject.org/pub/fedora/imagelist-fedora | grep -E '(releases|development)/[0-9]+' | sed -e 's,.*/\([0-9]*\)/.*,\1,g' | sort | uniq | tr "\n" " ") >> $GITHUB_OUTPUT
+        shell: bash
