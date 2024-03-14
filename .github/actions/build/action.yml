@@ -25,11 +25,13 @@ runs:
   using: "composite"
   steps:
     - name: Checkout fontquery
+      id: fontquery
       env:
         GITHUB_TOKEN: ${{ inputs.github_token }}
       run: |
-        git clone https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/fedora-i18n/fontquery
-        cd fontquery
+        FQRD=$(mktemp -d fontquery.XXXXXX)
+        git clone https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/fedora-i18n/fontquery ${FQRD}
+        echo "repodir=${FQRD}" >> $GITHUB_OUTPUT"
       shell: bash
     - name: Setup Python
       uses: actions/setup-python@v5
@@ -39,11 +41,11 @@ runs:
     - name: Install fontquery
       run: |
         pip install build wheel
-        pushd fontquery
+        pushd ${{ steps.fontquery.outputs.repodir }}
         python -m build
         pip install dist/fontquery*.whl
         popd
-        rm -rf fontquery
+        rm -rf ${{ steps.fontquery.outputs.repodir }}
       shell: bash
     - name: Install dependencies
       run: sudo apt install podman buildah
