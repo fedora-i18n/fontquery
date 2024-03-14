@@ -44,7 +44,7 @@ jobs:
       - name: Build Images
         run: |
           for r in ${{ steps.vars.outputs.fedora_releases }}; do
-            for t ${{ env.TARGET }}; do
+            for t in ${{ env.TARGET }}; do
               fontquery-build -r $r -t $t --rmi
             done
           done
