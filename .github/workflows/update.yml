@@ -1,0 +1,67 @@
+name: Update
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+permissions:
+  packages: write
+
+env:
+  REGISTRY_USER: ${{ github.actor }}
+  REGISTRY_PASSWORD: ${{ github.token }}
+  IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
+
+jobs:
+  update_minimal:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Get supported releases
+        id: fedora
+        uses: ./.github/actions/supported_releases
+      - name: Update Images
+        uses: ./.github/actions/update
+        with:
+          release: ${{ steps.fedora.outputs.releases }}
+          target: minimal
+          registry_username: ${{ env.REGISTRY_USER }}
+          registry_password: ${{ env.REGISTRY_PASSWORD }}
+          registry: ${{ env.IMAGE_REGISTRY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+  update_extra:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Get supported releases
+        id: fedora
+        uses: ./.github/actions/supported_releases
+      - name: Update Images
+        uses: ./.github/actions/update
+        with:
+          release: ${{ steps.fedora.outputs.releases }}
+          target: extra
+          registry_username: ${{ env.REGISTRY_USER }}
+          registry_password: ${{ env.REGISTRY_PASSWORD }}
+          registry: ${{ env.IMAGE_REGISTRY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+  update_all:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Get supported releases
+        id: fedora
+        uses: ./.github/actions/supported_releases
+      - name: Update Images
+        uses: ./.github/actions/update
+        with:
+          release: ${{ steps.fedora.outputs.releases }}
+          target: all
+          registry_username: ${{ env.REGISTRY_USER }}
+          registry_password: ${{ env.REGISTRY_PASSWORD }}
+          registry: ${{ env.IMAGE_REGISTRY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
