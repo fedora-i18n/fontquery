@@ -12,46 +12,47 @@ env:
   REGISTRY_USER: ${{ github.actor }}
   REGISTRY_PASSWORD: ${{ github.token }}
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
-  TARGET: minimal extra all
 
 jobs:
-  build:
+  build_minimal:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-      - name: Install fontquery
-        run: |
-          pip install build wheel
-          python -m build
-          pip install dist/fontquery*.whl
-      - name: Install dependencies
-        run: sudo apt install podman buildah
       - name: Get supported releases
-        id: vars
-        run: (echo -n "fedora_releases=" && curl https://dl.fedoraproject.org/pub/fedora/imagelist-fedora | grep -E '(releases|development)/[0-9]+' | sed -e 's,.*/\([0-9]*\)/.*,\1,g' | sort | uniq | tr "\n" " ") >> $GITHUB_OUTPUT
-      - name: Log in to ghcr.io
-        uses: redhat-actions/podman-login@v1
-        with:
-          username: ${{ env.REGISTRY_USER }}
-          password: ${{ env.REGISTRY_PASSWORD }}
-          registry: ${{ env.IMAGE_REGISTRY }}
+        id: fedora
+        uses: ./.github/actions/supported_releases
       - name: Build Images
-        run: |
-          for r in ${{ steps.vars.outputs.fedora_releases }}; do
-            for t in ${{ env.TARGET }}; do
-              fontquery-build -r $r -t $t --rmi
-            done
-          done
-      - name: Upload Images
-        run: |
-          for r in ${{ steps.vars.outputs.fedora_releases }}; do
-            for t in ${{ env.TARGET }}; do
-              fontquery-build -r $r -t $t -s -p
-            done
-          done
+        uses: ./.github/actions/build
+        with:
+          release: ${{ steps.fedora.outputs.supported_releases }}
+          target: minimal
+          registry_username: ${{ env.REGISTRY_USER }}
+          registry_password: ${{ env.REGISTRY_PASSWORD }}
+          registry: ${{ env.IMAGE_REGISTRY }}
+  build_extra:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get supported releases
+        id: fedora
+        uses: ./.github/actions/supported_releases
+      - name: Build Images
+        uses: ./.github/actions/build
+        with:
+          release: ${{ steps.fedora.outputs.supported_releases }}
+          target: extra
+          registry_username: ${{ env.REGISTRY_USER }}
+          registry_password: ${{ env.REGISTRY_PASSWORD }}
+          registry: ${{ env.IMAGE_REGISTRY }}
+  build_all:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get supported releases
+        id: fedora
+        uses: ./.github/actions/supported_releases
+      - name: Build Images
+        uses: ./.github/actions/build
+        with:
+          release: ${{ steps.fedora.outputs.supported_releases }}
+          target: all
+          registry_username: ${{ env.REGISTRY_USER }}
+          registry_password: ${{ env.REGISTRY_PASSWORD }}
+          registry: ${{ env.IMAGE_REGISTRY }}
