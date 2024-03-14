@@ -30,6 +30,7 @@ runs:
       run: |
         git clone https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/fedora-i18n/fontquery
         cd fontquery
+      shell: bash
     - name: Setup Python
       uses: actions/setup-python@v5
       with:
@@ -43,8 +44,10 @@ runs:
         pip install dist/fontquery*.whl
         popd
         rm -rf fontquery
+      shell: bash
     - name: Install dependencies
       run: sudo apt install podman buildah
+      shell: bash
     - name: Log in to ghcr.io
       uses: redhat-actions/podman-login@v1
       with:
@@ -56,8 +59,10 @@ runs:
         for r in ${{ inputs.release }}; do
           fontquery-build -r $r -t ${{ inputs.target }} --rmi
         done
+      shell: bash
     - name: Upload Images
       run: |
         for r in ${{ inputs.release }}; do
           fontquery-build -r $r -t ${{ inputs.target }} -s -p
         done
+      shell: bash
