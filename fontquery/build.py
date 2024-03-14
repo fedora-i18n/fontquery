@@ -78,8 +78,9 @@ class ContainerImage:
             return False
         return True
 
-    def build(self, *args, **kwargs) -> None:
+    def build(self, *args, **kwargs) -> bool:
         """Build an image"""
+        retval = True
         if self.exists(remote=False):
             print('Warning: {} is already available on local. You may want to remove older images manually.'.format(self._get_namespace()), file=sys.stderr)
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -107,9 +108,12 @@ class ContainerImage:
             if self.__verbose:
                 print('# ' + ' '.join(cmdline))
             if not ('try_run' in kwargs and kwargs['try_run']):
-                subprocess.run(cmdline, cwd=tmpdir)
+                ret = subprocess.run(cmdline, cwd=tmpdir)
+                retval = ret.returncode == 0
 
-    def update(self, *args, **kwargs) -> None:
+        return retval
+
+    def update(self, *args, **kwargs) -> bool:
         """Update an image"""
         if not self.exists(remote=True):
             raise RuntimeError("Image isn't yet available. try build first: {}".format(self._get_namespace()))
@@ -146,16 +150,18 @@ class ContainerImage:
                             print('** Image has been changed.')
                         else:
                             print('** Failed to change image.')
-                            sys.exit(1)
+                            return False
                     else:
                         print('** Updating image failed.')
-                        sys.exit(1)
+                        return False
                 else:
                     print('** No updates available')
             finally:
                 if self.__verbose:
                     print('# ' + ' '.join(cleancmdline))
                 subprocess.run(cleancmdline)
+
+        return True
 
     def clean(self, *args, **kwargs) -> None:
         """Clean up an image"""
@@ -171,7 +177,7 @@ class ContainerImage:
         if not ('try_run' in kwargs and kwargs['try_run']):
             subprocess.run(cmdline)
 
-    def push(self, *args, **kwargs) -> None:
+    def push(self, *args, **kwargs) -> bool:
         """Publish an image to registry"""
         if not self.exists(remote=False):
             print("Warning: {} isn't available on local.".format(self._get_namespace()))
@@ -183,7 +189,10 @@ class ContainerImage:
         if self.__verbose:
             print('# ' + ' '.join(cmdline))
         if not ('try_run' in kwargs and kwargs['try_run']):
-            subprocess.run(cmdline)
+            ret = subprocess.run(cmdline)
+            return ret.returncode == 0
+
+        return True
 
 
 def main():
@@ -253,11 +262,14 @@ def main():
             if args.rmi:
                 bldr.clean(**vars(args))
             if args.update:
-                bldr.update(**vars(args))
+                if not bldr.update(**vars(args)):
+                    sys.exit(1)
             else:
-                bldr.build(**vars(args))
+                if not bldr.build(**vars(args)):
+                    sys.exit(1)
         if args.push:
-            bldr.push(**vars(args))
+            if not bldr.push(**vars(args)):
+                sys.exit(1)
     else:
         target = ['minimal', 'extra', 'all']
         if not args.skip_build:
@@ -266,13 +278,16 @@ def main():
                 if args.rmi:
                     bldr.clean(**vars(args))
                 if args.update:
-                    bldr.update(**vars(args))
+                    if not bldr.update(**vars(args)):
+                        sys.exit(1)
                 else:
-                    bldr.build(**vars(args))
+                    if not bldr.build(**vars(args)):
+                        sys.exit(1)
         if args.push:
             for t in target:
                 bldr.target = t
-                bldr.push(**vars(args))
+                if not bldr.push(**vars(args)):
+                    sys.exit(1)
 
 
 if __name__ == '__main__':
