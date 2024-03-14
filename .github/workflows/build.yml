@@ -17,6 +17,8 @@ jobs:
   build_minimal:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Get supported releases
         id: fedora
         uses: ./.github/actions/supported_releases
