@@ -17,13 +17,16 @@ inputs:
   registry:
     description: "Registry to push"
     required: true
+  github_token:
+    description: "secrets.GITHUB_TOKEN"
+    required: true
 
 runs:
   using: "composite"
   steps:
     - name: Checkout fontquery
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ inputs.github_token }}
       run: |
         git clone https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/fedora-i18n/fontquery
         cd fontquery
