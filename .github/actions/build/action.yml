@@ -31,7 +31,7 @@ runs:
       run: |
         FQRD=$(mktemp -d fontquery.XXXXXX)
         git clone https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/fedora-i18n/fontquery ${FQRD}
-        echo "repodir=${FQRD}" >> $GITHUB_OUTPUT"
+        echo "repodir=${FQRD}" >> $GITHUB_OUTPUT
       shell: bash
     - name: Setup Python
       uses: actions/setup-python@v5
