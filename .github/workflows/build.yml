@@ -48,20 +48,3 @@ jobs:
           registry_password: ${{ env.REGISTRY_PASSWORD }}
           registry: ${{ env.IMAGE_REGISTRY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-  build_all:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Get supported releases
-        id: fedora
-        uses: ./.github/actions/supported_releases
-      - name: Build Images
-        uses: ./.github/actions/build
-        with:
-          release: ${{ steps.fedora.outputs.releases }}
-          target: all
-          registry_username: ${{ env.REGISTRY_USER }}
-          registry_password: ${{ env.REGISTRY_PASSWORD }}
-          registry: ${{ env.IMAGE_REGISTRY }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
