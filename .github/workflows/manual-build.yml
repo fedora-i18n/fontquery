@@ -1,0 +1,42 @@
+name: Manual Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Target to build/push"
+        required: true
+        default: "minimal"
+        type: choice
+        options:
+          - minimal
+          - extra
+          - all
+      release:
+        description: "Release number to build/push"
+        required: true
+        type: string
+
+permissions:
+  packages: write
+
+env:
+  REGISTRY_USER: ${{ github.actor }}
+  REGISTRY_PASSWORD: ${{ github.token }}
+  IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build Images
+        uses: ./.github/actions/build
+        with:
+          release: ${{ github.event.inputs.release }}
+          target: ${{ github.event.inputs.target }}
+          registry_username: ${{ env.REGISTRY_USER }}
+          registry_password: ${{ env.REGISTRY_PASSWORD }}
+          registry: ${{ env.IMAGE_REGISTRY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
