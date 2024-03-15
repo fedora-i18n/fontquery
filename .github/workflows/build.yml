@@ -57,7 +57,7 @@ jobs:
         id: fedora
         uses: ./.github/actions/supported_releases
       - name: Build Images
-        uses: ./.github/actions/build
+        uses: ./.github/actions/build_and_push
         with:
           release: ${{ steps.fedora.outputs.releases }}
           target: all

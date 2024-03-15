@@ -1,0 +1,65 @@
+name: "fontquery action"
+description: "Run actions for fontquery to build/push images and clean up once it is pushed"
+author: "tagoh"
+inputs:
+  release:
+    description: "Release number to build/push; space-separated array list"
+    required: true
+  target:
+    description: "Target name to build/push"
+    required: true
+  registry_username:
+    description: "Username for registry"
+    required: true
+  registry_password:
+    description: "Password for registry username"
+    required: true
+  registry:
+    description: "Registry to push"
+    required: true
+  github_token:
+    description: "secrets.GITHUB_TOKEN"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout fontquery
+      id: fontquery
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+      run: |
+        FQRD=$(mktemp -d fontquery.XXXXXX)
+        git clone https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/fedora-i18n/fontquery ${FQRD}
+        echo "repodir=${FQRD}" >> $GITHUB_OUTPUT
+      shell: bash
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    - name: Install fontquery
+      run: |
+        pip install build wheel
+        pushd ${{ steps.fontquery.outputs.repodir }}
+        python -m build
+        pip install dist/fontquery*.whl
+        popd
+        rm -rf ${{ steps.fontquery.outputs.repodir }}
+      shell: bash
+    - name: Install dependencies
+      run: sudo apt install podman buildah
+      shell: bash
+    - name: Log in to ghcr.io
+      uses: redhat-actions/podman-login@v1
+      with:
+        username: ${{ inputs.registry_username }}
+        password: ${{ inputs.registry_password }}
+        registry: ${{ inputs.registry }}
+    - name: Build/Push Images
+      run: |
+        for r in ${{ inputs.release }}; do
+          fontquery-build -r $r -t ${{ inputs.target }} --rmi -p
+          fontquery-build -r $r -t ${{ inputs.target }} --rmi -s
+        done
+      shell: bash
