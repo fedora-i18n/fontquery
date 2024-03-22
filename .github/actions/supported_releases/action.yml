@@ -11,5 +11,5 @@ runs:
   steps:
     - name: Get supported releases for Fedora
       id: fedora
-      run: (echo -n "supported_releases=rawhide " && curl https://dl.fedoraproject.org/pub/fedora/imagelist-fedora | grep -E '(releases|development)/[0-9]+' | sed -e 's,.*/\([0-9]*\)/.*,\1,g' | sort | uniq | tr "\n" " ") >> $GITHUB_OUTPUT
+      run: (echo -n "supported_releases=eln rawhide " && curl https://dl.fedoraproject.org/pub/fedora/imagelist-fedora | grep -E '(releases|development)/[0-9]+' | sed -e 's,.*/\([0-9]*\)/.*,\1,g' | sort | uniq | tr "\n" " ") >> $GITHUB_OUTPUT
       shell: bash
