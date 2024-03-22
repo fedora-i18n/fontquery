@@ -56,6 +56,10 @@ class ContainerImage:
         self.__version = version
         self.__target = None
         self.__verbose = verbose
+        if (platform == 'fedora' and version == 'eln'):
+            self.__registry = 'quay.io/fedoraci/fedora'
+        else:
+            self.__registry = 'registry.fedoraproject.org/fedora'
 
     def _get_namespace(self) -> str:
         if not self.__target:
@@ -111,6 +115,7 @@ class ContainerImage:
             shutil.copy2(abssetup, tmpdir)
             cmdline = [
                 'buildah', 'build', '-f', containerfile,
+                '--build-arg', 'registry={}'.format(self.__registry),
                 '--build-arg', 'release={}'.format(self.__version),
                 '--build-arg', 'setup={}'.format(setup),
                 '--build-arg', 'dist={}'.format(Path(dist).name),

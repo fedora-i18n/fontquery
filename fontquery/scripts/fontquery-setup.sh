@@ -112,7 +112,7 @@ case "$ID" in
             minimal)
                 echo "** Installing minimal font packages"
                 if [ $VERSION_ID -ge 39 ]; then
-                    dnf -y install default-fonts
+                    dnf -y install default-fonts*
                 else
                     dnf -y --setopt=install_weak_deps=False install @fonts
                 fi

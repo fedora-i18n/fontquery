@@ -1,5 +1,6 @@
 ARG release=38
-FROM registry.fedoraproject.org/fedora:${release} AS base
+ARG registry=registry.fedoraproject.org/fedora
+FROM ${registry}:${release} AS base
 ARG release
 ARG setup=./fontquery/scripts/fontquery-setup.sh
 ARG dist
