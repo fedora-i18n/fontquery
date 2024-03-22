@@ -34,6 +34,19 @@ import tempfile
 from importlib.resources import files
 from pathlib import Path
 
+try:
+    FQ_SCRIPT_PATH = files('fontquery.scripts')
+except ModuleNotFoundError:
+    FQ_SCRIPT_PATH = Path(__file__).parent / 'scripts'
+try:
+    FQ_DATA_PATH = files('fontquery.data')
+except ModuleNotFoundError:
+    FQ_DATA_PATH = Path(__file__).parent / 'data'
+try:
+    FQ_VERSION = importlib.metadata.version('fontquery')
+except ModuleNotFoundError:
+    import tomli
+    FQ_VERSION = tomli.load(open(Path(__file__).parent.parent / 'pyproject.toml', 'rb'))['project']['version']
 
 class ContainerImage:
     """Image Builder"""
@@ -84,12 +97,12 @@ class ContainerImage:
         if self.exists(remote=False):
             print('Warning: {} is already available on local. You may want to remove older images manually.'.format(self._get_namespace()), file=sys.stderr)
         with tempfile.TemporaryDirectory() as tmpdir:
-            abssetup = files('fontquery.scripts').joinpath('fontquery-setup.sh')
+            abssetup = FQ_SCRIPT_PATH.joinpath('fontquery-setup.sh')
             setup = str(abssetup.name)
             devpath = Path(__file__).parents[1]
-            sdist = str(devpath / 'dist' / 'fontquery-{}*.whl'.format(importlib.metadata.version('fontquery')))
+            sdist = str(devpath / 'dist' / 'fontquery-{}*.whl'.format(FQ_VERSION))
             dist = '' if not 'debug' in kwargs or not kwargs['debug'] else glob.glob(sdist)[0]
-            containerfile = str(files('fontquery.data').joinpath('Containerfile'))
+            containerfile = str(FQ_DATA_PATH.joinpath('Containerfile'))
             if dist:
                 # Use all files from development
                 containerfile = str(devpath / 'fontquery' / 'data' / 'Containerfile')
@@ -117,7 +130,7 @@ class ContainerImage:
         """Update an image"""
         if not self.exists(remote=True):
             raise RuntimeError("Image isn't yet available. try build first: {}".format(self._get_namespace()))
-        abssetup = files('fontquery.scripts').joinpath('fontquery-setup.sh')
+        abssetup = FQ_SCRIPT_PATH.joinpath('fontquery-setup.sh')
         setuppath = str(abssetup.parent)
         setup = str(abssetup.name)
         cname = 'fontquery-{}'.format(os.getpid())
@@ -239,9 +252,9 @@ def main():
     args = parser.parse_args()
 
     if args.version:
-        print(importlib.metadata.version('fontquery'))
+        print(FQ_VERSION)
         sys.exit(0)
-    if not os.path.isfile(files('fontquery.data').joinpath('Containerfile')):
+    if not os.path.isfile(FQ_DATA_PATH.joinpath('Containerfile')):
         print('Containerfile is missing')
         sys.exit(1)
 
