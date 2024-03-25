@@ -25,6 +25,7 @@ jobs:
       - name: Update Images
         uses: ./.github/actions/update
         with:
+          product: fedora
           release: ${{ steps.fedora.outputs.releases }}
           target: minimal
           registry_username: ${{ env.REGISTRY_USER }}
@@ -42,7 +43,38 @@ jobs:
       - name: Update Images
         uses: ./.github/actions/update
         with:
+          product: fedora
           release: ${{ steps.fedora.outputs.releases }}
+          target: extra
+          registry_username: ${{ env.REGISTRY_USER }}
+          registry_password: ${{ env.REGISTRY_PASSWORD }}
+          registry: ${{ env.IMAGE_REGISTRY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+  update_centos_minimal:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Update Images
+        uses: ./.github/actions/update
+        with:
+          product: centos
+          release: "8 9"
+          target: minimal
+          registry_username: ${{ env.REGISTRY_USER }}
+          registry_password: ${{ env.REGISTRY_PASSWORD }}
+          registry: ${{ env.IMAGE_REGISTRY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+  update_centos_extra:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Update Images
+        uses: ./.github/actions/update
+        with:
+          product: centos
+          release: "8 9"
           target: extra
           registry_username: ${{ env.REGISTRY_USER }}
           registry_password: ${{ env.REGISTRY_PASSWORD }}

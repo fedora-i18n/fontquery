@@ -12,6 +12,14 @@ on:
           - minimal
           - extra
           - all
+      product:
+        description: "Product name to build/push"
+        required: true
+        default: "fedora"
+        type: choice
+        options:
+          - fedora
+          - centos
       release:
         description: "Release number to build/push"
         required: true
@@ -34,6 +42,7 @@ jobs:
       - name: Build Images
         uses: ./.github/actions/build
         with:
+          product: ${{ github.event.inputs.product }}
           release: ${{ github.event.inputs.release }}
           target: ${{ github.event.inputs.target }}
           registry_username: ${{ env.REGISTRY_USER }}
