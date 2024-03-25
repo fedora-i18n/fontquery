@@ -110,7 +110,7 @@ def dump(params: object) -> str:
             ]
             if params.verbose:
                 print('# ' + ' '.join(cmdline), flush=True, file=sys.stderr)
-            retval = subprocess.run(cmdline, capture_output=True)
+            retval = subprocess.run(cmdline, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
             cond_empty = re.compile(r'^$')
             out = [
