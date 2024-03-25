@@ -2,6 +2,9 @@ name: "fontquery action"
 description: "Run actions for fontquery to build/push images"
 author: "tagoh"
 inputs:
+  product:
+    description: "Product name to build"
+    required: true
   release:
     description: "Release number to build/push; space-separated array list"
     required: true
@@ -59,12 +62,12 @@ runs:
     - name: Build Images
       run: |
         for r in ${{ inputs.release }}; do
-          fontquery-build -r $r -t ${{ inputs.target }} --rmi
+          fontquery-build -P ${{ inputs.product }} -r $r -t ${{ inputs.target }} --rmi
         done
       shell: bash
     - name: Upload Images
       run: |
         for r in ${{ inputs.release }}; do
-          fontquery-build -r $r -t ${{ inputs.target }} -s -p
+          fontquery-build -P ${{ inputs.product }} -r $r -t ${{ inputs.target }} -s -p
         done
       shell: bash
