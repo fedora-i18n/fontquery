@@ -55,11 +55,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Get supported releases
+        id: centos
+        uses: ./.github/actions/centos_supported_releases
       - name: Build Images
         uses: ./.github/actions/build
         with:
           product: centos
-          release: "8 9"
+          release: ${{ steps.centos.outputs.releases }}
           target: minimal
           registry_username: ${{ env.REGISTRY_USER }}
           registry_password: ${{ env.REGISTRY_PASSWORD }}
@@ -70,11 +73,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Get supported releases
+        id: centos
+        uses: ./.github/actions/centos_supported_releases
       - name: Build Images
         uses: ./.github/actions/build
         with:
           product: centos
-          release: "8 9"
+          release: ${{ steps.centos.outputs.releases }}
           target: extra
           registry_username: ${{ env.REGISTRY_USER }}
           registry_password: ${{ env.REGISTRY_PASSWORD }}

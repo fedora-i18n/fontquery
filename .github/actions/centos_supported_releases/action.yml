@@ -1,0 +1,15 @@
+name: "Get supported releases for CentOS"
+description: "Run actions to get supported releases for CentOS"
+author: "tagoh"
+outputs:
+  releases:
+    description: "Release number currently supported by CentOS"
+    value: ${{ steps.centos.outputs.supported_releases }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Get supported releases for CentOS
+      id: centos
+      run: echo -n "supported_releases=8 9" >> $GITHUB_OUTPUT
+      shell: bash
