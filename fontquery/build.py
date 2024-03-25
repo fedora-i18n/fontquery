@@ -28,6 +28,7 @@ import sys
 import os
 import argparse
 import importlib.metadata
+import re
 import subprocess
 import shutil
 import tempfile
@@ -51,20 +52,27 @@ except ModuleNotFoundError:
 class ContainerImage:
     """Image Builder"""
 
-    def __init__(self, platform: str, version: str, verbose: bool = False):
-        self.__platform = platform
+    def __init__(self, product: str, version: str, verbose: bool = False):
+        self.__product = product
         self.__version = version
         self.__target = None
         self.__verbose = verbose
-        if (platform == 'fedora' and version == 'eln'):
-            self.__registry = 'quay.io/fedoraci/fedora'
+        if product == 'fedora':
+            if version == 'eln':
+                self.__registry = 'quay.io/fedoraci/fedora'
+            else:
+                self.__registry = 'registry.fedoraproject.org/fedora'
+        elif product == 'centos':
+            self.__registry = 'quay.io/centos/centos'
+            if re.match(r'\d+$', version):
+                self.__version = 'stream' + version
         else:
-            self.__registry = 'registry.fedoraproject.org/fedora'
+            raise RuntimeError('Unknown product')
 
     def _get_namespace(self) -> str:
         if not self.__target:
             raise RuntimeError('No target is set')
-        return 'fontquery/{}/{}:{}'.format(self.__platform, self.__target, self.__version)
+        return 'fontquery/{}/{}:{}'.format(self.__product, self.__target, self.__version)
 
     def _get_fullnamespace(self) -> str:
         return 'ghcr.io/fedora-i18n/{}'.format(self._get_namespace())
@@ -229,6 +237,11 @@ def main():
     parser.add_argument('--rmi',
                         action='store_true',
                         help='Remove image before building')
+    parser.add_argument('-P', '--product',
+                        default='fedora',
+                        choices=['fedora', 'centos'],
+                        help='Product name to build image'
+                        )
     parser.add_argument('-p', '--push', action='store_true', help='Push image')
     parser.add_argument('-s',
                         '--skip-build',
@@ -267,7 +280,7 @@ def main():
         print('buildah is not installed')
         sys.exit(1)
 
-    bldr = ContainerImage('fedora', args.release, args.verbose)
+    bldr = ContainerImage(args.product, args.release, args.verbose)
     if args.update and args.rmi:
         print('Warning: --rmi and --update option are conflict each other. Disabling --rmi.')
         args.rmi = False

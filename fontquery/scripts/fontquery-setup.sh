@@ -61,7 +61,7 @@ done
 if test "$OPT_CHECKUPDATE" -eq 1; then
     EXIT_STATUS=0
     case "$ID" in
-        fedora)
+        fedora|centos)
             echo "** Checking updates"
             dnf -y check-update
             EXIT_STATUS=$?
@@ -77,7 +77,7 @@ fi
 if test "$OPT_UPDATE" -eq 1; then
     EXIT_STATUS=0
     case "$ID" in
-        fedora)
+        fedora|centos)
             echo "** Updating packages"
             dnf -y update
             EXIT_STATUS=$?
@@ -91,6 +91,52 @@ if test "$OPT_UPDATE" -eq 1; then
 fi
 
 case "$ID" in
+    centos)
+        case "$OPT_TARGET" in
+            base)
+                echo "** Removing macros.image-language-conf if any"; rm -f /etc/rpm/macros.image-language-conf
+                echo "** Updating all base packages"; dnf -y update
+                echo "** Installing fontconfig"; dnf -y install fontconfig
+                echo "** Installing anaconda-core"; dnf -y install anaconda-core
+                echo "** Installing python packages"; dnf -y install python3-pip
+                echo "** Cleaning up dnf cache"; dnf -y clean all
+                if test -n "$DIST"; then
+                    echo "** Installing fontquery from local"
+                    pip install /tmp/$(basename $DIST)
+                else
+                    echo "** Installing fontquery from PyPI"
+                    pip install fontquery
+                fi
+                rm /tmp/fontquery* || :
+                ;;
+            minimal)
+                echo "** Installing minimal font packages"
+                if [ $VERSION_ID -ge 10 ]; then
+                    dnf -y install default-fonts*
+                else
+                    dnf -y --setopt=install_weak_deps=False install @fonts
+                fi
+                dnf -y clean all
+                ;;
+            extra)
+                echo "** Installing extra font packages"
+                if [ $VERSION_ID -ge 10 ]; then
+                    dnf -y install langpacks-fonts-*
+                else
+                    dnf -y install langpacks*
+                fi
+                dnf -y clean all
+                ;;
+            all)
+                echo "** Installing all font packages"
+                dnf -y --setopt=install_weak_deps=False install --skip-broken -x bicon-fonts -x root-fonts -x wine*-fonts -x php-tcpdf*-fonts -x texlive*-fonts -x mathgl-fonts -x python*-matplotlib-data-fonts *-fonts && dnf -y clean all
+                ;;
+            *)
+                echo "Error: Unknown target: $OPT_TARGET" >&2
+                exit 1
+                ;;
+        esac
+        ;;
     fedora)
         case "$OPT_TARGET" in
             base)
@@ -136,9 +182,9 @@ case "$ID" in
                 exit 1
                 ;;
         esac
-        ;;
-    *)
-        echo "Error: Unsupported distribution: $ID" >&2
-        exit 1
-        ;;
+         ;;
+     *)
+         echo "Error: Unsupported distribution: $ID" >&2
+         exit 1
+         ;;
 esac

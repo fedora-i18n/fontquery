@@ -56,8 +56,8 @@ def get_json(release, args):
         print('* This may take some time...', file=sys.stderr)
         cmdline = [
             'podman', 'run', '--rm',
-            'ghcr.io/fedora-i18n/fontquery/fedora/{}:{}'.format(
-                args.target, release), '-m', 'json'
+            'ghcr.io/fedora-i18n/fontquery/{}/{}:{}'.format(
+                args.product, args.target, release), '-m', 'json'
         ] + (['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
              else []) + ([] if args.lang is None else
                          [' '.join(['-l=' + ls
@@ -80,7 +80,7 @@ def load_json(release, args, fcache):
     if release == 'local':
         out = get_json(release, args)
     else:
-        fqc = FontQueryCache('fedora', release, args.target)
+        fqc = FontQueryCache(args.product, release, args.target)
         if args.clean_cache:
             fqc.delete()
         if fcache:
@@ -127,6 +127,10 @@ def main():
                         type=argparse.FileType('w'),
                         default='-',
                         help='Output file')
+    parser.add_argument('-P', '--product',
+                        default='fedora',
+                        choices=['fedora', 'centos'],
+                        help='Product name to operate')
     parser.add_argument('-R', '--render',
                         default='text',
                         choices=renderer.keys())

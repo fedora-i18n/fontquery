@@ -61,8 +61,8 @@ def run(release, args):
         print('* This may take some time...', file=sys.stderr)
         cmdline = [
             'podman', 'run', '--rm',
-            'ghcr.io/fedora-i18n/fontquery/fedora/{}:{}'.format(
-                args.target, release), '-m', args.mode
+            'ghcr.io/fedora-i18n/fontquery/{}/{}:{}'.format(
+                args.product, args.target, release), '-m', args.mode
         ] + (['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
              else []) + ([] if args.lang is None else
                          [' '.join(['-l=' + ls
@@ -84,7 +84,7 @@ def load(release, args, fcache):
     if release == 'local':
         out = run(release, args)
     else:
-        fqc = FontQueryCache('fedora', release, args.target)
+        fqc = FontQueryCache(args.product, release, args.target)
         if args.clean_cache:
             fqc.delete()
         if fcache:
@@ -121,7 +121,7 @@ def main():
                         help='Enforce processing everything even if not updating')
     parser.add_argument('-f',
                         '--filename-format',
-                        default='{platform}-{release}-{target}.{mode}',
+                        default='{product}-{release}-{target}.{mode}',
                         help='Output filename format. only take effects with --mode=html')
     parser.add_argument('-r',
                         '--release',
@@ -141,6 +141,11 @@ def main():
                         '--output-dir',
                         default='.',
                         help='Output directory')
+    parser.add_argument('-P',
+                        '--product',
+                        default='fedora',
+                        choices=['fedora', 'centos'],
+                        help='Product name to operate')
     parser.add_argument('-t',
                         '--target',
                         default='minimal',
@@ -148,7 +153,7 @@ def main():
                         help='Query fonts from')
     parser.add_argument('-T',
                         '--title',
-                        default='{platform} {release}: {target}',
+                        default='{product} {release}: {target}',
                         help='Page title format. only take effects with --mode=html')
     parser.add_argument('-v',
                         '--verbose',
@@ -179,6 +184,7 @@ def main():
         sys.exit(0)
     ofile = str(Path(args.output_dir) / args.filename_format)
     if args.verbose:
+        print('* Product: {}'.format(args.product), file=sys.stderr)
         print('* Release: {}'.format(args.release), file=sys.stderr)
         print('* Target: {}'.format(args.target), file=sys.stderr)
         print('* Language: {}'.format(args.lang), file=sys.stderr)
@@ -201,10 +207,10 @@ def main():
             with tempfile.NamedTemporaryFile(mode='w+') as tmp:
                 tmp.write(out)
                 tmp.seek(0)
-                with open(ofile.format(platform='fedora', release=r,
+                with open(ofile.format(product=args.product, release=r,
                                        target=args.target, mode=origmode), 'w') as fw:
                     fontquery.htmlformatter.run('table', tmp, None, fw, fontquery.htmlformatter.HtmlRenderer(),
-                                                args.title.format(platform='fedora',
+                                                args.title.format(product=args.product,
                                                                   release=r,
                                                                   target=args.target))
         else:
