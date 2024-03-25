@@ -101,9 +101,11 @@ case "$ID" in
                 echo "** Installing python packages"; dnf -y install python3-pip
                 echo "** Cleaning up dnf cache"; dnf -y clean all
                 if [ -x $(command -v pip) ]; then
-                    PIP=$(command -v pip)
+                    echo "** pip is available"
+                    PIP="$(command -v pip)"
                 elif [ -x $(command -v pip3) ]; then
-                    PIP=$(command -v pip3)
+                    echo "** pip3 is available"
+                    PIP="$(command -v pip3)"
                 else
                     echo "Error: pip not found" >& 2
                     exit 1
@@ -155,9 +157,11 @@ case "$ID" in
                 echo "** Installing python packages"; dnf -y install python3-pip
                 echo "** Cleaning up dnf cache"; dnf -y clean all
                 if [ -x $(command -v pip) ]; then
-                    PIP=$(command -v pip)
+                    echo "** pip is available"
+                    PIP="$(command -v pip)"
                 elif [ -x $(command -v pip3) ]; then
-                    PIP=$(command -v pip3)
+                    echo "** pip3 is available"
+                    PIP="$(command -v pip3)"
                 else
                     echo "Error: pip not found" >& 2
                     exit 1
