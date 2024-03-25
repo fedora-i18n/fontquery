@@ -101,10 +101,10 @@ case "$ID" in
                 echo "** Installing python packages"; dnf -y install python3-pip
                 echo "** Cleaning up dnf cache"; dnf -y clean all
                 PIP=""
-                if [ -x $(command -v pip) ]; then
+                if [ -x "$(command -v pip)" ]; then
                     echo "** pip is available"
                     PIP="$(command -v pip)"
-                elif [ -x $(command -v pip3) ]; then
+                elif [ -x "$(command -v pip3)" ]; then
                     echo "** pip3 is available"
                     PIP="$(command -v pip3)"
                 fi
