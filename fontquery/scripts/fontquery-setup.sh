@@ -100,21 +100,25 @@ case "$ID" in
                 echo "** Installing anaconda-core"; dnf -y install anaconda-core
                 echo "** Installing python packages"; dnf -y install python3-pip
                 echo "** Cleaning up dnf cache"; dnf -y clean all
+                PIP=""
                 if [ -x $(command -v pip) ]; then
                     echo "** pip is available"
                     PIP="$(command -v pip)"
                 elif [ -x $(command -v pip3) ]; then
                     echo "** pip3 is available"
                     PIP="$(command -v pip3)"
-                else
+                fi
+                if [ -z "$PIP" ]; then
                     echo "Error: pip not found" >& 2
                     exit 1
                 fi
                 if test -n "$DIST"; then
                     echo "** Installing fontquery from local"
+                    echo $PIP install /tmp/$(basename $DIST)
                     $PIP install /tmp/$(basename $DIST)
                 else
                     echo "** Installing fontquery from PyPI"
+                    echo $PIP install fontquery
                     $PIP install fontquery
                 fi
                 rm /tmp/fontquery* || :
@@ -156,21 +160,25 @@ case "$ID" in
                 echo "** Installing anaconda-core"; dnf -y install anaconda-core
                 echo "** Installing python packages"; dnf -y install python3-pip
                 echo "** Cleaning up dnf cache"; dnf -y clean all
+                PIP=""
                 if [ -x $(command -v pip) ]; then
                     echo "** pip is available"
                     PIP="$(command -v pip)"
                 elif [ -x $(command -v pip3) ]; then
                     echo "** pip3 is available"
                     PIP="$(command -v pip3)"
-                else
+                fi
+                if [ -z "$PIP" ]; then
                     echo "Error: pip not found" >& 2
                     exit 1
                 fi
                 if test -n "$DIST"; then
                     echo "** Installing fontquery from local"
+                    echo $PIP install /tmp/$(basename $DIST)
                     $PIP install /tmp/$(basename $DIST)
                 else
                     echo "** Installing fontquery from PyPI"
+                    echo $PIP install fontquery
                     $PIP install fontquery
                 fi
                 rm /tmp/fontquery* || :
