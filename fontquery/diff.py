@@ -27,6 +27,7 @@ import argparse
 import importlib.metadata
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -46,6 +47,9 @@ from pathlib import Path
 from xdg import BaseDirectory
 
 def get_json(release, args):
+    if args.product == 'centos':
+        if re.match(r'\d+$', release):
+            release = 'stream' + release
     if release == 'local':
         cmdline = ['fontquery-container', '-m', 'json'] + (
             ['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1

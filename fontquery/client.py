@@ -26,6 +26,7 @@
 import argparse
 import importlib.metadata
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -48,6 +49,9 @@ from xdg import BaseDirectory
 
 
 def run(release, args):
+    if args.product == 'centos':
+        if re.match(r'\d+$', release):
+            release = 'stream' + release
     if release == 'local':
         fqcexec = 'fontquery-container'
         if not shutil.which(fqcexec):
