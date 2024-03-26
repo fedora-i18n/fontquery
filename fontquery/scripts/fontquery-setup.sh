@@ -2,6 +2,8 @@
 # Copyright (C) 2023 Red Hat, Inc.
 # SPDX-License-Identifier: MIT
 
+set -e
+
 . /etc/os-release
 
 debug() {
