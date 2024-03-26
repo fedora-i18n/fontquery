@@ -113,6 +113,9 @@ case "$ID" in
                 elif [ -x "$(command -v pip3)" ]; then
                     echo "** pip3 is available"
                     PIP="$(command -v pip3)"
+                elif [ -x "$(command -v pip3.11)" ]; then
+                    echo "** pip3.11 is available"
+                    PIP="$(command -v pip3.11)"
                 fi
                 if [ -z "$PIP" ]; then
                     echo "Error: pip not found" >& 2
