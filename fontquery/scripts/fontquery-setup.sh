@@ -100,7 +100,11 @@ case "$ID" in
                 echo "** Updating all base packages"; dnf -y update
                 echo "** Installing fontconfig"; dnf -y install fontconfig
                 echo "** Installing anaconda-core"; dnf -y install anaconda-core
-                echo "** Installing python packages"; dnf -y install python3-pip
+                if [ $VERSION_ID -le 9 ]; then
+                    echo "** Installing python packages"; dnf -y install python3.11-pip
+                else
+                    echo "** Installing python packages"; dnf -y install python3-pip
+                fi
                 echo "** Cleaning up dnf cache"; dnf -y clean all
                 PIP=""
                 if [ -x "$(command -v pip)" ]; then
