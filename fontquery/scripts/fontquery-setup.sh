@@ -118,8 +118,8 @@ case "$ID" in
                     $PIP install /tmp/$(basename $DIST)
                 else
                     echo "** Installing fontquery from PyPI"
-                    echo $PIP install fontquery
-                    $PIP install fontquery
+                    echo $PIP install "fontquery >= 1.10"
+                    $PIP install "fontquery >= 1.10"
                 fi
                 rm /tmp/fontquery* || :
                 ;;
@@ -178,8 +178,8 @@ case "$ID" in
                     $PIP install /tmp/$(basename $DIST)
                 else
                     echo "** Installing fontquery from PyPI"
-                    echo $PIP install fontquery
-                    $PIP install fontquery
+                    echo $PIP install "fontquery >= 1.10"
+                    $PIP install "fontquery >= 1.10"
                 fi
                 rm /tmp/fontquery* || :
                 ;;
