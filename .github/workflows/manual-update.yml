@@ -1,0 +1,51 @@
+name: Manual Update
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Target to build/push"
+        required: true
+        default: "minimal"
+        type: choice
+        options:
+          - minimal
+          - extra
+          - all
+      product:
+        description: "Product name to build/push"
+        required: true
+        default: "fedora"
+        type: choice
+        options:
+          - fedora
+          - centos
+      release:
+        description: "Release number to build/push"
+        required: true
+        type: string
+
+permissions:
+  packages: write
+
+env:
+  REGISTRY_USER: ${{ github.actor }}
+  REGISTRY_PASSWORD: ${{ github.token }}
+  IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Update Images
+        uses: ./.github/actions/update
+        with:
+          product: ${{ github.event.inputs.product }}
+          release: ${{ github.event.inputs.release }}
+          target: ${{ github.event.inputs.target }}
+          registry_username: ${{ env.REGISTRY_USER }}
+          registry_password: ${{ env.REGISTRY_PASSWORD }}
+          registry: ${{ env.IMAGE_REGISTRY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
