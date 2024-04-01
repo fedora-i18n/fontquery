@@ -81,7 +81,7 @@ if test "$OPT_UPDATE" -eq 1; then
     case "$ID" in
         fedora|centos)
             echo "** Updating packages"
-            dnf -y update
+            dnf -y update --setopt=protected_packages=,
             EXIT_STATUS=$?
             ;;
         *)
@@ -97,7 +97,7 @@ case "$ID" in
         case "$OPT_TARGET" in
             base)
                 echo "** Removing macros.image-language-conf if any"; rm -f /etc/rpm/macros.image-language-conf
-                echo "** Updating all base packages"; dnf -y update
+                echo "** Updating all base packages"; dnf -y update --setopt=protected_packages=,
                 echo "** Installing fontconfig"; dnf -y install fontconfig
                 echo "** Installing anaconda-core"; dnf -y install anaconda-core
                 if [ $VERSION_ID -le 9 ]; then
@@ -164,7 +164,7 @@ case "$ID" in
         case "$OPT_TARGET" in
             base)
                 echo "** Removing macros.image-language-conf if any"; rm -f /etc/rpm/macros.image-language-conf
-                echo "** Updating all base packages"; dnf -y update
+                echo "** Updating all base packages"; dnf -y update --setopt=protected_packages=,
                 echo "** Installing fontconfig"; dnf -y install fontconfig
                 echo "** Installing anaconda-core"; dnf -y install anaconda-core
                 echo "** Installing python packages"; dnf -y install python3-pip
