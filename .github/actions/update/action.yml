@@ -59,7 +59,7 @@ runs:
     - name: Update Images
       run: |
         for r in ${{ inputs.release }}; do
-          fontquery-build -r $r -t ${{ inputs.target }} --rmi -u
+          fontquery-build -r $r -t ${{ inputs.target }} -u
         done
       shell: bash
     - name: Upload Images
