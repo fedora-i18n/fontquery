@@ -64,7 +64,7 @@ class ContainerImage:
                 self.__registry = 'registry.fedoraproject.org/fedora'
         elif product == 'centos':
             self.__registry = 'quay.io/centos/centos'
-            if re.match(r'\d+$', version):
+            if re.match(r'\d+(\-development)?$', version):
                 self.__version = 'stream' + version
         else:
             raise RuntimeError('Unknown product')
