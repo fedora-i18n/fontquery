@@ -50,7 +50,7 @@ from xdg import BaseDirectory
 
 def run(release, args):
     if args.product == 'centos':
-        if re.match(r'\d+$', release):
+        if re.match(r'\d+(\-development)?$', release):
             release = 'stream' + release
     if release == 'local':
         fqcexec = 'fontquery-container'

@@ -61,7 +61,7 @@ class ContainerImage:
             if version == 'eln':
                 self.__registry = 'quay.io/fedoraci/fedora'
             else:
-                self.__registry = 'registry.fedoraproject.org/fedora'
+                self.__registry = 'quay.io/fedora/fedora'
         elif product == 'centos':
             self.__registry = 'quay.io/centos/centos'
             if re.match(r'\d+(\-development)?$', version):

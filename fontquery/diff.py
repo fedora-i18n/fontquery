@@ -48,7 +48,7 @@ from xdg import BaseDirectory
 
 def get_json(release, args):
     if args.product == 'centos':
-        if re.match(r'\d+$', release):
+        if re.match(r'\d+(\-development)?$', release):
             release = 'stream' + release
     if release == 'local':
         cmdline = ['fontquery-container', '-m', 'json'] + (
