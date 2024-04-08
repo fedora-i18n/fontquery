@@ -126,7 +126,7 @@ def main():
     parser.add_argument('-f',
                         '--filename-format',
                         default='{product}-{release}-{target}.{mode}',
-                        help='Output filename format. only take effects with --mode=html')
+                        help='Output filename format. only take effects with --mode=html or using multiple --release option')
     parser.add_argument('-r',
                         '--release',
                         default=defrel,
@@ -218,7 +218,12 @@ def main():
                                                                   release=r,
                                                                   target=args.target))
         else:
-            print(out)
+            if len(args.release) == 1:
+                print(out)
+            else:
+                with open(ofile.format(product=args.product, release=r,
+                                       target=args.target, mode=origmode), 'w') as fw:
+                    fw.write(out)
 
 
 if __name__ == '__main__':
