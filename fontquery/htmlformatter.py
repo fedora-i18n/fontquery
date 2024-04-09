@@ -532,7 +532,8 @@ def json2langgroupdiff(data: dict[str, Any],
 def generate_table(renderer: DataRenderer, title: str, data: dict[str, Any]) -> Iterator[str]:
     """Format data to HTML."""
     sorteddata = json2data(data, False)
-    renderer.title = title
+    renderer.title = title.format(product=data['id'], release=data['version_id'],
+                                  target=data['pattern'])
     renderer.imagetype = data['pattern']
     yield from renderer.render_table(sorteddata)
 
@@ -559,7 +560,9 @@ def generate_diff(renderer: DataRenderer, title: str, data: dict[str, Any],
     langdata = json2langgroup(matched)
     langdiffdata = json2langgroupdiff(notmatched, sorteddiffdata)
 
-    renderer.title = title
+    renderer.title = title.format(product1=data['id'], product2=diffdata['id'],
+                                  release1=data['version_id'], release2=diffdata['version_id'],
+                                  target1=data['pattern'], target2=diffdata['pattern'])
     renderer.imagetype = data['pattern']
     renderer.imagedifftype = diffdata['pattern']
 
