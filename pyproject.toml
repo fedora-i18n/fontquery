@@ -35,8 +35,8 @@ dependencies = [
 "Bug Tracker" = "https://github.com/fedora-i18n/fontquery/issues"
 
 [project.entry-points.console_scripts]
-"fontquery-container" = "fontquery.container:main"
-"fontquery" = "fontquery.client:main"
+"fontquery-client" = "fontquery.client:main"
+"fontquery" = "fontquery.frontend:main"
 "fontquery-build" = "fontquery.build:main"
 "fq2html" = "fontquery.htmlformatter:main"
 "fontquery-diff" = "fontquery.diff:main"

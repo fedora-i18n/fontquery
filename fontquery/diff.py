@@ -37,7 +37,7 @@ try:
 except ModuleNotFoundError:
     pass
 try:
-    from fontquery import container  # noqa: F401
+    from fontquery import client  # noqa: F401
     local_not_supported = False
 except ModuleNotFoundError:
     local_not_supported = True
@@ -51,7 +51,7 @@ def get_json(release, args):
         if re.match(r'\d+(\-development)?$', release):
             release = 'stream' + release
     if release == 'local':
-        cmdline = ['fontquery-container', '-m', 'json'] + (
+        cmdline = ['fontquery-client', '-m', 'json'] + (
             ['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
             else []) + ([] if args.lang is None else
                         [' '.join(['-l=' + ls

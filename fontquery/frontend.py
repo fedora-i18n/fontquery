@@ -1,4 +1,4 @@
-# client.py
+# frontend.py
 # Copyright (C) 2022-2023 Red Hat, Inc.
 #
 # Authors:
@@ -21,7 +21,7 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  THE SOFTWARE PROVIDED HEREUNDER IS
 # ON AN "AS IS" BASIS, AND THE COPYRIGHT HOLDER HAS NO OBLIGATION TO
 # PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
-"""Module to perform a client application for fontquery."""
+"""Module to perform a frontend application for fontquery."""
 
 import argparse
 import importlib.metadata
@@ -39,7 +39,7 @@ except ModuleNotFoundError:
     pass
 import fontquery.htmlformatter # noqa: F401
 try:
-    from fontquery import container  # noqa: F401
+    from fontquery import client  # noqa: F401
     local_not_supported = False
 except ModuleNotFoundError:
     local_not_supported = True
@@ -53,9 +53,9 @@ def run(release, args):
         if re.match(r'\d+(\-development)?$', release):
             release = 'stream' + release
     if release == 'local':
-        fqcexec = 'fontquery-container'
+        fqcexec = 'fontquery-client'
         if not shutil.which(fqcexec):
-            fqcexec = container.__file__
+            fqcexec = client.__file__
         else:
             fqcexec = shutil.which(fqcexec)
         cmdline = ['python', fqcexec, '-m', args.mode] + (
@@ -112,7 +112,7 @@ def load(release, args, fcache):
     return out
 
 def main():
-    """Endpoint to execute fontquery client program."""
+    """Endpoint to execute fontquery frontend program."""
     defrel = ['local']
 
     parser = argparse.ArgumentParser(

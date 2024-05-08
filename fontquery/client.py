@@ -1,4 +1,4 @@
-# container.py
+# client.py
 # Copyright (C) 2022 Red Hat, Inc.
 #
 # Authors:
@@ -21,7 +21,7 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  THE SOFTWARE PROVIDED HEREUNDER IS
 # ON AN "AS IS" BASIS, AND THE COPYRIGHT HOLDER HAS NO OBLIGATION TO
 # PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
-"""Module to deal with container for fontquery."""
+"""Module to deal with client for fontquery."""
 
 import argparse
 import csv
@@ -154,7 +154,7 @@ def update(params: object) -> str:
     sys.exit(res.returncode)
 
 def main():
-    """Endpoint to execute fontquery-container program."""
+    """Endpoint to execute fontquery-client program."""
     fccmd = {'fcmatch': 'fc-match',
              'fclist': 'fc-list',
              'json': dump,
