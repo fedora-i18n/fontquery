@@ -94,18 +94,23 @@ fi
 
 case "$ID" in
     centos)
+        DNFOPT=
+        if [ $VERSION_ID -eq 10 ]; then
+            # workaround for failing on mirror
+            DNFOPT="--disablerepo=* --repofrompath=BaseOS,https://composes.stream.centos.org/stream-10/production/latest-CentOS-Stream/compose/BaseOS/x86_64/os --repofrompath=AppStream,https://composes.stream.centos.org/stream-10/production/latest-CentOS-Stream/compose/AppStream/x86_64/os --nogpgcheck"
+        fi
         case "$OPT_TARGET" in
             base)
                 echo "** Removing macros.image-language-conf if any"; rm -f /etc/rpm/macros.image-language-conf
-                echo "** Updating all base packages"; dnf -y update --setopt=protected_packages=,
-                echo "** Installing fontconfig"; dnf -y install fontconfig
-                echo "** Installing anaconda-core"; dnf -y install anaconda-core
+                echo "** Updating all base packages"; dnf -y update $DNFOPT --setopt=protected_packages=,
+                echo "** Installing fontconfig"; dnf -y $DNFOPT install fontconfig
+                echo "** Installing anaconda-core"; dnf -y $DNFOPT install anaconda-core
                 if [ $VERSION_ID -le 9 ]; then
-                    echo "** Installing python packages"; dnf -y install python3.11-pip
+                    echo "** Installing python packages"; dnf -y $DNFOPT install python3.11-pip
                 else
-                    echo "** Installing python packages"; dnf -y install python3-pip
+                    echo "** Installing python packages"; dnf -y $DNFOPT install python3-pip
                 fi
-                echo "** Cleaning up dnf cache"; dnf -y clean all
+                echo "** Cleaning up dnf cache"; dnf -y $DNFOPT clean all
                 PIP=""
                 if [ -x "$(command -v pip)" ]; then
                     echo "** pip is available"
@@ -135,24 +140,24 @@ case "$ID" in
             minimal)
                 echo "** Installing minimal font packages"
                 if [ $VERSION_ID -ge 10 ]; then
-                    dnf -y install default-fonts*
+                    dnf -y $DNFOPT install default-fonts*
                 else
-                    dnf -y --setopt=install_weak_deps=False install @fonts
+                    dnf -y $DNFOPT --setopt=install_weak_deps=False install @fonts
                 fi
-                dnf -y clean all
+                dnf -y $DNFOPT clean all
                 ;;
             extra)
                 echo "** Installing extra font packages"
                 if [ $VERSION_ID -ge 10 ]; then
-                    dnf -y install langpacks-fonts-*
+                    dnf -y $DNFOPT install langpacks-fonts-*
                 else
-                    dnf -y install langpacks*
+                    dnf -y $DNFOPT install langpacks*
                 fi
-                dnf -y clean all
+                dnf -y $DNFOPT clean all
                 ;;
             all)
                 echo "** Installing all font packages"
-                dnf -y --setopt=install_weak_deps=False install --skip-broken -x bicon-fonts -x root-fonts -x wine*-fonts -x php-tcpdf*-fonts -x texlive*-fonts -x mathgl-fonts -x python*-matplotlib-data-fonts *-fonts && dnf -y clean all
+                dnf -y $DNFOPT --setopt=install_weak_deps=False install --skip-broken -x bicon-fonts -x root-fonts -x wine*-fonts -x php-tcpdf*-fonts -x texlive*-fonts -x mathgl-fonts -x python*-matplotlib-data-fonts *-fonts && dnf -y clean all
                 ;;
             *)
                 echo "Error: Unknown target: $OPT_TARGET" >&2
