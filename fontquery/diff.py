@@ -51,7 +51,12 @@ def get_json(release, args):
         if re.match(r'\d+(\-development)?$', release):
             release = 'stream' + release
     if release == 'local':
-        cmdline = ['fontquery-client', '-m', 'json'] + (
+        fqcexec = 'fontquery-client'
+        if not shutil.which(fqcexec):
+            fqcexec = client.__file__
+        else:
+            fqcexec = shutil.which(fqcexec)
+        cmdline = ['python', fqcexec, '-m', 'json'] + (
             ['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
             else []) + ([] if args.lang is None else
                         [' '.join(['-l=' + ls
