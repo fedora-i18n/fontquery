@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fontquery"
-version = "1.11"
+version = "1.12"
 authors = [
   { name = "Akira TAGOH", email="akira@tagoh.org" }
 ]
