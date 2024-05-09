@@ -143,7 +143,7 @@ def fcmatchaliases(params: object) -> str:
                 'fc-match', '-f',
                 ('  ({}):\t  \"%{{family[0]:-<unknown family>}}\" '
                  '\"%{{style[0]:-<unknown style>}}\"').format(a),
-                '{}:lang={}'.format(a, ls.replace('_','-'))
+                ':family={}:lang={}'.format(a, ls.replace('_','-'))
             ]
             if params.verbose:
                 print('# ' + ' '.join(cmdline), flush=True, file=sys.stderr)
