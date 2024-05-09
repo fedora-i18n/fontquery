@@ -53,6 +53,8 @@ def run(release, args):
         if re.match(r'\d+(\-development)?$', release):
             release = 'stream' + release
     if release == 'local':
+        if args.mode == 'fcmatchaliases':
+            print('* This may take some time...', file=sys.stderr)
         fqcexec = 'fontquery-client'
         if not shutil.which(fqcexec):
             fqcexec = client.__file__
@@ -140,8 +142,8 @@ def main():
                         help='Language list to dump fonts data into JSON')
     parser.add_argument('-m',
                         '--mode',
-                        default='fcmatch',
-                        choices=['fcmatch', 'fclist', 'json', 'html'],
+                        default='fcmatchaliases',
+                        choices=['fcmatch', 'fclist', 'fcmatchaliases', 'json', 'html'],
                         help='Action to perform for query')
     parser.add_argument('-O',
                         '--output-dir',

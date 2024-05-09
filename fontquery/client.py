@@ -129,6 +129,35 @@ def dump(params: object) -> str:
 
     return json.dumps(jsons, indent=4)
 
+def fcmatchaliases(params: object) -> str:
+    """Show results of generic aliases"""
+    results = []
+    if not shutil.which('fc-match'):
+        print('fc-match is not installed', file=sys.stderr)
+        sys.exit(1)
+    for ls in params.lang:
+        if len(params.lang) > 1:
+            results.append("{}:".format(ls))
+        for a in ['sans-serif', 'serif', 'monospace', 'system-ui']:
+            cmdline = [
+                'fc-match', '-f',
+                ('  ({}):\t  \"%{{family[0]:-<unknown family>}}\" '
+                 '\"%{{style[0]:-<unknown style>}}\"').format(a),
+                '{}:lang={}'.format(a, ls.replace('_','-'))
+            ]
+            if params.verbose:
+                print('# ' + ' '.join(cmdline), flush=True, file=sys.stderr)
+            retval = subprocess.run(cmdline, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            cond_empty = re.compile(r'^$')
+            out = [
+                s for s in retval.stdout.decode('utf-8').split('\n')
+                if not cond_empty.match(s)
+            ]
+            results += out
+
+    return "\n".join(results)
+
 def checkupdate(params: object) -> str:
     if not shutil.which('fontquery-setup.sh'):
         print('fontquery-setup.sh is not installed')
@@ -157,6 +186,7 @@ def main():
     """Endpoint to execute fontquery-client program."""
     fccmd = {'fcmatch': 'fc-match',
              'fclist': 'fc-list',
+             'fcmatchaliases': fcmatchaliases,
              'json': dump,
              'update': update,
              'checkupdate': checkupdate,
@@ -195,7 +225,7 @@ def main():
                         help='Language list to dump fonts data into JSON')
     parser.add_argument('-m',
                         '--mode',
-                        default='fcmatch',
+                        default='fcmatchaliases',
                         choices=list(fccmd.keys()),
                         help='Action to perform for query')
     parser.add_argument('-p',
