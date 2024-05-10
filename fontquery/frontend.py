@@ -44,6 +44,7 @@ try:
 except ModuleNotFoundError:
     local_not_supported = True
 from fontquery.cache import FontQueryCache # noqa: F401
+from fontquery.container import ContainerImage # noqa: F401
 from pathlib import Path
 from xdg import BaseDirectory
 
@@ -67,6 +68,11 @@ def run(release, args):
                                    for ls in args.lang])]) + args.args
     else:
         print('* This may take some time...', file=sys.stderr)
+        if not args.disable_update:
+            c = ContainerImage(args.product, release, args.verbose)
+            c.target = args.target
+            if not c.pull(args):
+                raise RuntimeError('`podman pull\' failed')
         cmdline = [
             'podman', 'run', '--rm',
             'ghcr.io/fedora-i18n/fontquery/{}/{}:{}'.format(
@@ -127,6 +133,9 @@ def main():
     parser.add_argument('--disable-cache',
                         action='store_true',
                         help='Enforce processing everything even if not updating')
+    parser.add_argument('--disable-update',
+                        action='store_true',
+                        help='Do not update the container image')
     parser.add_argument('-f',
                         '--filename-format',
                         default='{product}-{release}-{target}.{mode}',
