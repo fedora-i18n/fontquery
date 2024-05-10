@@ -69,23 +69,45 @@ if test "$OPT_CHECKUPDATE" -eq 1; then
             EXIT_STATUS=$?
             ;;
         *)
-            echo "Error: Unknown target: $OPT_TARGET" >&2
+            echo "Error: Unsupported distribution: $ID" >&2
             exit 1
             ;;
     esac
     exit $EXIT_STATUS
 fi
 
+DNF=""
+
+case "$ID" in
+    fedora|centos)
+        if [ -x "$(command -v dnf)" ]; then
+            echo "** dnf is available"
+            DNF="$(command -v dnf)"
+        elif [ -x "$(command -v dnf5)" ]; then
+            echo "** dnf5 is available"
+            DNF="$(command -v dnf5)"
+        fi
+        if [ -z "$DNF" ]; then
+            echo "Error: dnf not found" >& 2
+            exit 1
+        fi
+        ;;
+    *)
+        echo "Error: Unsupported distribution: $ID" >&2
+        exit 1
+        ;;
+esac
+
 if test "$OPT_UPDATE" -eq 1; then
     EXIT_STATUS=0
     case "$ID" in
         fedora|centos)
             echo "** Updating packages"
-            dnf -y update --setopt=protected_packages=,
+            $DNF -y update --setopt=protected_packages=,
             EXIT_STATUS=$?
             ;;
         *)
-            echo "Error: Unknown target: $OPT_TARGET" >&2
+            echo "Error: Unsupported distribution: $ID" >&2
             exit 1
             ;;
     esac
@@ -102,15 +124,15 @@ case "$ID" in
         case "$OPT_TARGET" in
             base)
                 echo "** Removing macros.image-language-conf if any"; rm -f /etc/rpm/macros.image-language-conf
-                echo "** Updating all base packages"; dnf -y update $DNFOPT --setopt=protected_packages=,
-                echo "** Installing fontconfig"; dnf -y $DNFOPT install fontconfig
-                echo "** Installing anaconda-core"; dnf -y $DNFOPT install anaconda-core
+                echo "** Updating all base packages"; $DNF -y update $DNFOPT --setopt=protected_packages=,
+                echo "** Installing fontconfig"; $DNF -y $DNFOPT install fontconfig
+                echo "** Installing anaconda-core"; $DNF -y $DNFOPT install anaconda-core
                 if [ $VERSION_ID -le 9 ]; then
-                    echo "** Installing python packages"; dnf -y $DNFOPT install python3.11-pip
+                    echo "** Installing python packages"; $DNF -y $DNFOPT install python3.11-pip
                 else
-                    echo "** Installing python packages"; dnf -y $DNFOPT install python3-pip
+                    echo "** Installing python packages"; $DNF -y $DNFOPT install python3-pip
                 fi
-                echo "** Cleaning up dnf cache"; dnf -y $DNFOPT clean all
+                echo "** Cleaning up dnf cache"; $DNF -y $DNFOPT clean all
                 PIP=""
                 if [ -x "$(command -v pip)" ]; then
                     echo "** pip is available"
@@ -140,24 +162,24 @@ case "$ID" in
             minimal)
                 echo "** Installing minimal font packages"
                 if [ $VERSION_ID -ge 10 ]; then
-                    dnf -y $DNFOPT install default-fonts*
+                    $DNF -y $DNFOPT install default-fonts*
                 else
-                    dnf -y $DNFOPT --setopt=install_weak_deps=False install @fonts
+                    $DNF -y $DNFOPT --setopt=install_weak_deps=False install @fonts
                 fi
-                dnf -y $DNFOPT clean all
+                $DNF -y $DNFOPT clean all
                 ;;
             extra)
                 echo "** Installing extra font packages"
                 if [ $VERSION_ID -ge 10 ]; then
-                    dnf -y $DNFOPT install langpacks-fonts-*
+                    $DNF -y $DNFOPT install langpacks-fonts-*
                 else
-                    dnf -y $DNFOPT install langpacks*
+                    $DNF -y $DNFOPT install langpacks*
                 fi
-                dnf -y $DNFOPT clean all
+                $DNF -y $DNFOPT clean all
                 ;;
             all)
                 echo "** Installing all font packages"
-                dnf -y $DNFOPT --setopt=install_weak_deps=False install --skip-broken -x bicon-fonts -x root-fonts -x wine*-fonts -x php-tcpdf*-fonts -x texlive*-fonts -x mathgl-fonts -x python*-matplotlib-data-fonts *-fonts && dnf -y clean all
+                $DNF -y $DNFOPT --setopt=install_weak_deps=False install --skip-broken -x bicon-fonts -x root-fonts -x wine*-fonts -x php-tcpdf*-fonts -x texlive*-fonts -x mathgl-fonts -x python*-matplotlib-data-fonts *-fonts && $DNF -y clean all
                 ;;
             *)
                 echo "Error: Unknown target: $OPT_TARGET" >&2
@@ -169,11 +191,11 @@ case "$ID" in
         case "$OPT_TARGET" in
             base)
                 echo "** Removing macros.image-language-conf if any"; rm -f /etc/rpm/macros.image-language-conf
-                echo "** Updating all base packages"; dnf -y update --setopt=protected_packages=,
-                echo "** Installing fontconfig"; dnf -y install fontconfig
-                echo "** Installing anaconda-core"; dnf -y install anaconda-core
-                echo "** Installing python packages"; dnf -y install python3-pip
-                echo "** Cleaning up dnf cache"; dnf -y clean all
+                echo "** Updating all base packages"; $DNF -y update --setopt=protected_packages=,
+                echo "** Installing fontconfig"; $DNF -y install fontconfig
+                echo "** Installing anaconda-core"; $DNF -y install anaconda-core
+                echo "** Installing python packages"; $DNF -y install python3-pip
+                echo "** Cleaning up dnf cache"; $DNF -y clean all
                 PIP=""
                 if [ -x $(command -v pip) ]; then
                     echo "** pip is available"
@@ -200,33 +222,33 @@ case "$ID" in
             minimal)
                 echo "** Installing minimal font packages"
                 if [ $VERSION_ID -ge 39 ]; then
-                    dnf -y install default-fonts*
+                    $DNF -y install default-fonts*
                 else
-                    dnf -y --setopt=install_weak_deps=False install @fonts
+                    $DNF -y --setopt=install_weak_deps=False install @fonts
                 fi
-                dnf -y clean all
+                $DNF -y clean all
                 ;;
             extra)
                 echo "** Installing extra font packages"
                 if [ $VERSION_ID -ge 39 ]; then
-                    dnf -y install langpacks-fonts-*
+                    $DNF -y install langpacks-fonts-*
                 else
-                    dnf -y install langpacks*
+                    $DNF -y install langpacks*
                 fi
-                dnf -y clean all
+                $DNF -y clean all
                 ;;
             all)
                 echo "** Installing all font packages"
-                dnf -y --setopt=install_weak_deps=False install --skip-broken -x bicon-fonts -x root-fonts -x wine*-fonts -x php-tcpdf*-fonts -x texlive*-fonts -x mathgl-fonts -x python*-matplotlib-data-fonts *-fonts && dnf -y clean all
+                $DNF -y --setopt=install_weak_deps=False install --skip-broken -x bicon-fonts -x root-fonts -x wine*-fonts -x php-tcpdf*-fonts -x texlive*-fonts -x mathgl-fonts -x python*-matplotlib-data-fonts *-fonts && $DNF -y clean all
                 ;;
             *)
                 echo "Error: Unknown target: $OPT_TARGET" >&2
                 exit 1
                 ;;
         esac
-         ;;
-     *)
-         echo "Error: Unsupported distribution: $ID" >&2
-         exit 1
-         ;;
+        ;;
+    *)
+        echo "Error: Unsupported distribution: $ID" >&2
+        exit 1
+        ;;
 esac
