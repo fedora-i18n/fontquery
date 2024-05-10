@@ -31,8 +31,8 @@ LABEL description="Working environment for fontquery - minimal"
 # Install
 RUN echo "* Installing default fonts packages"; fontquery-setup.sh -t minimal
 
-CMD ["/usr/local/bin/fontquery-container", "--pattern", "minimal"]
-ENTRYPOINT ["/usr/local/bin/fontquery-container", "--pattern", "minimal"]
+CMD ["/usr/local/bin/fontquery-client", "--pattern", "minimal"]
+ENTRYPOINT ["/usr/local/bin/fontquery-client", "--pattern", "minimal"]
 
 #
 # extra image
@@ -46,8 +46,8 @@ LABEL description="Working environment for fontquery - extra"
 # Install
 RUN echo "* Installing langpacks extra font packages"; fontquery-setup.sh -t extra
 
-CMD ["/usr/local/bin/fontquery-container", "--pattern", "extra"]
-ENTRYPOINT ["/usr/local/bin/fontquery-container", "--pattern", "extra"]
+CMD ["/usr/local/bin/fontquery-client", "--pattern", "extra"]
+ENTRYPOINT ["/usr/local/bin/fontquery-client", "--pattern", "extra"]
 
 #
 # all
@@ -61,5 +61,5 @@ LABEL description="Working environment for fontquery - All fonts packages"
 # Install
 RUN echo "* Installing all fonts packages"; fontquery-setup.sh -t all
 
-CMD ["/usr/local/bin/fontquery-container", "--pattern", "all"]
-ENTRYPOINT ["/usr/local/bin/fontquery-container", "--pattern", "all"]
+CMD ["/usr/local/bin/fontquery-client", "--pattern", "all"]
+ENTRYPOINT ["/usr/local/bin/fontquery-client", "--pattern", "all"]
