@@ -11,5 +11,5 @@ runs:
   steps:
     - name: Get supported releases for CentOS
       id: centos
-      run: echo -n "supported_releases=8 9 10-development" >> $GITHUB_OUTPUT
+      run: echo -n "supported_releases=9 10-development" >> $GITHUB_OUTPUT
       shell: bash
