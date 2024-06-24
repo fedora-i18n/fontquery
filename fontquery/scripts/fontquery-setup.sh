@@ -33,6 +33,39 @@ OPT_UPDATE=0
 OPT_CHECKUPDATE=0
 DIST="${DIST:-}"
 
+detect_pip() {
+    PIP=""
+    if [ -x "$(command -v pip)" ]; then
+        echo "** pip is available"
+        PIP="$(command -v pip)"
+    elif [ -x "$(command -v pip3)" ]; then
+        echo "** pip3 is available"
+        PIP="$(command -v pip3)"
+    elif [ -x "$(command -v pip3.11)" ]; then
+        echo "** pip3.11 is available"
+        PIP="$(command -v pip3.11)"
+    fi
+    if [ -z "$PIP" ]; then
+        echo "Error: pip not found" >& 2
+        exit 1
+    fi
+    echo $PIP
+}
+
+update_fontquery() {
+    PIP=$(detect_pip)
+    if test -n "$DIST"; then
+        echo "** Installing fontquery from local"
+        echo $PIP install /tmp/$(basename $DIST)
+        $PIP install /tmp/$(basename $DIST)
+    else
+        echo "** Installing fontquery from PyPI"
+        echo $PIP install "fontquery >= 1.10"
+        $PIP install "fontquery >= 1.10"
+    fi
+    rm /tmp/fontquery* || :
+}
+
 while getopts cht:uv OPT; do
     case "$OPT" in
         h)
@@ -105,6 +138,7 @@ if test "$OPT_UPDATE" -eq 1; then
             echo "** Updating packages"
             $DNF -y update --setopt=protected_packages=,
             EXIT_STATUS=$?
+            update_fontquery
             ;;
         *)
             echo "Error: Unsupported distribution: $ID" >&2
@@ -133,31 +167,7 @@ case "$ID" in
                     echo "** Installing python packages"; $DNF -y $DNFOPT install python3-pip
                 fi
                 echo "** Cleaning up dnf cache"; $DNF -y $DNFOPT clean all
-                PIP=""
-                if [ -x "$(command -v pip)" ]; then
-                    echo "** pip is available"
-                    PIP="$(command -v pip)"
-                elif [ -x "$(command -v pip3)" ]; then
-                    echo "** pip3 is available"
-                    PIP="$(command -v pip3)"
-                elif [ -x "$(command -v pip3.11)" ]; then
-                    echo "** pip3.11 is available"
-                    PIP="$(command -v pip3.11)"
-                fi
-                if [ -z "$PIP" ]; then
-                    echo "Error: pip not found" >& 2
-                    exit 1
-                fi
-                if test -n "$DIST"; then
-                    echo "** Installing fontquery from local"
-                    echo $PIP install /tmp/$(basename $DIST)
-                    $PIP install /tmp/$(basename $DIST)
-                else
-                    echo "** Installing fontquery from PyPI"
-                    echo $PIP install "fontquery >= 1.10"
-                    $PIP install "fontquery >= 1.10"
-                fi
-                rm /tmp/fontquery* || :
+                update_fontquery
                 ;;
             minimal)
                 echo "** Installing minimal font packages"
@@ -196,28 +206,7 @@ case "$ID" in
                 echo "** Installing anaconda-core"; $DNF -y install anaconda-core
                 echo "** Installing python packages"; $DNF -y install python3-pip
                 echo "** Cleaning up dnf cache"; $DNF -y clean all
-                PIP=""
-                if [ -x $(command -v pip) ]; then
-                    echo "** pip is available"
-                    PIP="$(command -v pip)"
-                elif [ -x $(command -v pip3) ]; then
-                    echo "** pip3 is available"
-                    PIP="$(command -v pip3)"
-                fi
-                if [ -z "$PIP" ]; then
-                    echo "Error: pip not found" >& 2
-                    exit 1
-                fi
-                if test -n "$DIST"; then
-                    echo "** Installing fontquery from local"
-                    echo $PIP install /tmp/$(basename $DIST)
-                    $PIP install /tmp/$(basename $DIST)
-                else
-                    echo "** Installing fontquery from PyPI"
-                    echo $PIP install "fontquery >= 1.10"
-                    $PIP install "fontquery >= 1.10"
-                fi
-                rm /tmp/fontquery* || :
+                update_fontquery
                 ;;
             minimal)
                 echo "** Installing minimal font packages"
