@@ -36,13 +36,13 @@ DIST="${DIST:-}"
 detect_pip() {
     PIP=""
     if [ -x "$(command -v pip)" ]; then
-        echo "** pip is available"
+        echo "** pip is available" >& 2
         PIP="$(command -v pip)"
     elif [ -x "$(command -v pip3)" ]; then
-        echo "** pip3 is available"
+        echo "** pip3 is available" >& 2
         PIP="$(command -v pip3)"
     elif [ -x "$(command -v pip3.11)" ]; then
-        echo "** pip3.11 is available"
+        echo "** pip3.11 is available" >& 2
         PIP="$(command -v pip3.11)"
     fi
     if [ -z "$PIP" ]; then
