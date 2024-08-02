@@ -567,7 +567,7 @@ def generate_diff(renderer: DataRenderer, title: str, data: dict[str, Any],
     renderer.imagedifftype = diffdata['pattern']
 
     yield from renderer.render_diff(langdata, missing_a, missing_b, langdiffdata)
-    yield True if not missing_a and not missing_b else False
+    yield True if not missing_a and not missing_b and not langdiffdata else False
 
 def run(mode, in1, in2, out, renderer, title):
     data = None
