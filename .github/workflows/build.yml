@@ -16,74 +16,64 @@ env:
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
 jobs:
-  build_minimal:
+  check_releases:
+    name: Check releases
     runs-on: ubuntu-latest
+    outputs:
+      fedora-matrix: ${{ steps.fedora.outputs.releases }}
+      centos-matrix: ${{ steps.centos.outputs.releases }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Get supported releases
+      - name: Get supported releases for Fedora
         id: fedora
         uses: ./.github/actions/supported_releases
-      - name: Build Images
+      - name: Get supported releases for CentOS
+        id: centos
+        uses: ./.github/actions/centos_supported_releases
+
+  iterate_fedora_build:
+    needs:
+      - check_releases
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      fail-fast: true
+      matrix:
+        releases: ${{ fromJson(needs.check_releases.outputs.fedora-matrix) }}
+        target: ["minimal", "extra"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Start the build
         uses: ./.github/actions/build
         with:
           product: fedora
-          release: ${{ steps.fedora.outputs.releases }}
-          target: minimal
+          release: ${{ matrix.releases }}
+          target: ${{ matrix.target }}
           registry_username: ${{ env.REGISTRY_USER }}
           registry_password: ${{ env.REGISTRY_PASSWORD }}
           registry: ${{ env.IMAGE_REGISTRY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-  build_extra:
+  iterate_centos_build:
+    needs:
+      - check_releases
     runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      fail-fast: true
+      matrix:
+        releases: ${{ fromJson(needs.check_releases.outputs.centos-matrix) }}
+        target: ["minimal", "extra"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Get supported releases
-        id: fedora
-        uses: ./.github/actions/supported_releases
-      - name: Build Images
-        uses: ./.github/actions/build
-        with:
-          product: fedora
-          release: ${{ steps.fedora.outputs.releases }}
-          target: extra
-          registry_username: ${{ env.REGISTRY_USER }}
-          registry_password: ${{ env.REGISTRY_PASSWORD }}
-          registry: ${{ env.IMAGE_REGISTRY }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-  build_centos_minimal:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Get supported releases
-        id: centos
-        uses: ./.github/actions/centos_supported_releases
-      - name: Build Images
+      - name: Start the build
         uses: ./.github/actions/build
         with:
           product: centos
-          release: ${{ steps.centos.outputs.releases }}
-          target: minimal
-          registry_username: ${{ env.REGISTRY_USER }}
-          registry_password: ${{ env.REGISTRY_PASSWORD }}
-          registry: ${{ env.IMAGE_REGISTRY }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-  build_centos_extra:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Get supported releases
-        id: centos
-        uses: ./.github/actions/centos_supported_releases
-      - name: Build Images
-        uses: ./.github/actions/build
-        with:
-          product: centos
-          release: ${{ steps.centos.outputs.releases }}
-          target: extra
+          release: ${{ matrix.releases }}
+          target: ${{ matrix.target }}
           registry_username: ${{ env.REGISTRY_USER }}
           registry_password: ${{ env.REGISTRY_PASSWORD }}
           registry: ${{ env.IMAGE_REGISTRY }}
