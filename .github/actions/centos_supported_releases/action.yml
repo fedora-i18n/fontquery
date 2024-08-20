@@ -11,5 +11,10 @@ runs:
   steps:
     - name: Get supported releases for CentOS
       id: centos
-      run: echo -n "supported_releases=9 10-development" >> $GITHUB_OUTPUT
+      run: |
+        (echo -n "supported_releases=["
+        for i in 9 10-development; do
+          echo -n "\"$i\","
+        done
+        echo "]") | sed -e 's/,]/]/' >> $GITHUB_OUTPUT
       shell: bash
