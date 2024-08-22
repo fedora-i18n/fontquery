@@ -9,6 +9,9 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - name: Install dependencies
+      run: sudo apt install curl
+      shell: bash
     - name: Get supported releases for Fedora
       id: fedora
       run: |
