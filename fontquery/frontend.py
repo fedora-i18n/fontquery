@@ -34,19 +34,18 @@ import tempfile
 import warnings
 from collections import Counter
 try:
-    import fontquery_debug # noqa: F401
+    import fontquery_debug  # noqa: F401
 except ModuleNotFoundError:
     pass
-import fontquery.htmlformatter # noqa: F401
+import fontquery.htmlformatter  # noqa: F401
 try:
     from fontquery import client  # noqa: F401
     local_not_supported = False
 except ModuleNotFoundError:
     local_not_supported = True
-from fontquery.cache import FontQueryCache # noqa: F401
-from fontquery.container import ContainerImage # noqa: F401
+from fontquery.cache import FontQueryCache  # noqa: F401
+from fontquery.container import ContainerImage  # noqa: F401
 from pathlib import Path
-from xdg import BaseDirectory
 
 
 def run(release, args):
@@ -92,6 +91,7 @@ def run(release, args):
 
     return result.stdout.decode('utf-8')
 
+
 def load(release, args, fcache):
     out = None
 
@@ -118,6 +118,7 @@ def load(release, args, fcache):
                         print('failed', file=sys.stderr)
 
     return out
+
 
 def main():
     """Endpoint to execute fontquery frontend program."""
@@ -152,7 +153,8 @@ def main():
     parser.add_argument('-m',
                         '--mode',
                         default='fcmatchaliases',
-                        choices=['fcmatch', 'fclist', 'fcmatchaliases', 'json', 'html'],
+                        choices=['fcmatch', 'fclist', 'fcmatchaliases',
+                                 'json', 'html'],
                         help='Action to perform for query')
     parser.add_argument('-O',
                         '--output-dir',
@@ -189,8 +191,6 @@ def main():
     rellist = list(rr.elements())
     args.release = rellist if rellist else defrel
 
-    cache = None
-    cmdline = []
     out = None
     origmode = args.mode
     redirect = True if args.mode == 'html' else False
@@ -231,7 +231,7 @@ def main():
                                                                   release=r,
                                                                   target=args.target))
         else:
-            if len(args.release) == 1:
+            if len(args.release) == 1 and args.mode != 'json':
                 print(out)
             else:
                 with open(ofile.format(product=args.product, release=r,
