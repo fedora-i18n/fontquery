@@ -30,7 +30,7 @@ def fontquery_version() -> str:
     """Return fontquery version in string."""
     retval = None
     with open(os.path.join(os.path.dirname(__file__), 'version.txt'),
-              'r') as f:
+              'r', encoding='utf-8') as f:
         retval = f.read().strip()
 
     return retval

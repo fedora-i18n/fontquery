@@ -1,5 +1,5 @@
 # diff.py
-# Copyright (C) 2023 Red Hat, Inc.
+# Copyright (C) 2023-2024 Red Hat, Inc.
 #
 # Authors:
 #   Akira TAGOH  <tagoh@redhat.com>
@@ -26,25 +26,22 @@
 import argparse
 import importlib.metadata
 import json
-import os
 import re
 import shutil
 import subprocess
 import sys
-import warnings
 try:
-    import fontquery_debug # noqa: F401
+    import fontquery_debug  # noqa: F401
 except ModuleNotFoundError:
     pass
 try:
     from fontquery import client  # noqa: F401
-    local_not_supported = False
+    LOCAL_NOT_SUPPORTED = False
 except ModuleNotFoundError:
-    local_not_supported = True
-from fontquery import htmlformatter # noqa: F401
-from fontquery.cache import FontQueryCache # noqa: F401
-from pathlib import Path
-from xdg import BaseDirectory
+    LOCAL_NOT_SUPPORTED = True
+from fontquery import htmlformatter  # noqa: F401
+from fontquery.cache import FontQueryCache  # noqa: F401
+
 
 def get_json(release, args):
     if args.product == 'centos':
@@ -62,11 +59,11 @@ def get_json(release, args):
                         [' '.join(['-l=' + ls
                                    for ls in args.lang])])
     else:
-        print('* This may take some time...', file=sys.stderr)
         cmdline = [
             'podman', 'run', '--rm',
-            'ghcr.io/fedora-i18n/fontquery/{}/{}:{}'.format(
-                args.product, args.target, release), '-m', 'json'
+            'ghcr.io/fedora-i18n/fontquery/'
+            f'{args.product}/{args.target}:{release}',
+            '-m', 'json'
         ] + (['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
              else []) + ([] if args.lang is None else
                          [' '.join(['-l=' + ls
@@ -75,13 +72,15 @@ def get_json(release, args):
     if args.verbose:
         print('# ' + ' '.join(cmdline), file=sys.stderr)
 
-    result = subprocess.run(cmdline, stdout=subprocess.PIPE)
+    result = subprocess.run(cmdline, stdout=subprocess.PIPE, check=False)
     if result.returncode != 0:
         sys.tracebacklimit = 0
-        raise RuntimeError('`podman run\' failed with the error code {}'.format(result.returncode))
+        raise RuntimeError('`podman run\' failed with '
+                           'the error code {result.returncode}')
     out = result.stdout.decode('utf-8')
 
     return out
+
 
 def load_json(release, args, fcache):
     out = None
@@ -110,6 +109,7 @@ def load_json(release, args, fcache):
 
     return out
 
+
 def main():
     """Endpoint to execute fontquery diff program."""
     renderer = {'html': htmlformatter.HtmlRenderer,
@@ -124,7 +124,8 @@ def main():
                         help='Clean up caches before processing')
     parser.add_argument('--disable-cache',
                         action='store_true',
-                        help='Enforce processing everything even if not updating')
+                        help='Enforce processing everything '
+                        'even if not updating')
     parser.add_argument('-l',
                         '--lang',
                         action='append',
@@ -166,18 +167,20 @@ def main():
     if args.version:
         print(importlib.metadata.version('fontquery'))
         sys.exit(0)
-    if local_not_supported:
+    if LOCAL_NOT_SUPPORTED:
         raise TypeError('local query feature is not available.')
     if not shutil.which('podman'):
         print('podman is not installed', file=sys.stderr)
         sys.exit(1)
 
     if args.verbose:
-        print('* Target: {}'.format(args.target), file=sys.stderr)
-        print('* Language: {}'.format(args.lang), file=sys.stderr)
+        print(f'* Target: {args.target}', file=sys.stderr)
+        print(f'* Language: {args.lang}', file=sys.stderr)
         print(file=sys.stderr)
 
-    print('* Comparison between {} and {}'.format(args.compare_a, args.compare_b), file=sys.stderr)
+    print('* Comparison between '
+          f'{args.compare_a} and {args.compare_b}',
+          file=sys.stderr)
 
     retval_a = load_json(args.compare_a, args,
                          not args.disable_cache and not args.lang)
@@ -187,11 +190,13 @@ def main():
     with args.output:
         g = htmlformatter.generate_diff(renderer[args.render](), '',
                                         json.loads(retval_a),
-                                        json.loads(retval_b), not args.loose_comparison)
+                                        json.loads(retval_b),
+                                        not args.loose_comparison)
         for s in next(g):
             args.output.write(s)
         ret = next(g)
     sys.exit(0 if ret else 1)
+
 
 if __name__ == '__main__':
     main()

@@ -1,5 +1,5 @@
 # formatter.py
-# Copyright (C) 2022 Red Hat, Inc.
+# Copyright (C) 2022-2024 Red Hat, Inc.
 #
 # Authors:
 #   Akira TAGOH  <tagoh@redhat.com>
@@ -27,17 +27,20 @@ import argparse
 import atexit
 import importlib.metadata
 import json
-import markdown
 import os
 import re
 import sys
+from typing import Any, Iterator
+import markdown
 try:
     from termcolor import colored
 except ModuleNotFoundError:
-    print('* Disabling color support due to missing dependencies', file=sys.stderr)
+    print('* Disabling color support due to missing dependencies',
+          file=sys.stderr)
+
     def colored(s, *args, **kwargs):
         return str(s)
-from typing import Any, IO, Iterator
+
 
 class DataRenderer:
     """Abstract class for renderer"""
@@ -72,9 +75,9 @@ class DataRenderer:
         self.__imagedifftype = v
 
     def __diff__(self, data: dict[str, Any],
-                    missing_a: dict[str, Any],
-                    missing_b: dict[str, Any],
-                    diffdata: dict[str, Any]):
+                 missing_a: dict[str, Any],
+                 missing_b: dict[str, Any],
+                 diffdata: dict[str, Any]):
         pass
 
     def __table__(self, data: dict[str, Any]):
@@ -93,13 +96,10 @@ class DataRenderer:
 class HtmlRenderer(DataRenderer):
     """Render html"""
 
-    def __init__(self):
-        super().__init__()
-
     def __diff__(self, data: dict[str, Any],
-                    missing_a: dict[str, Any],
-                    missing_b: dict[str, Any],
-                    diffdata: dict[str, Any]):
+                 missing_a: dict[str, Any],
+                 missing_b: dict[str, Any],
+                 diffdata: dict[str, Any]):
         diff_templ = [
             '<tr>',
             '<td class="lang" rowspan="2">{lang}</td>',
@@ -138,11 +138,11 @@ class HtmlRenderer(DataRenderer):
 
         tables.append('\n'.join(header_templ))
         aliases = ['sans-serif', 'serif', 'monospace']
-        aliasids = ['sans', 'serif', 'mono']
 
         for k in sorted(data.keys()):
             templ = '\n'.join(nodiff_templ)
-            lang = ','.join(['{}({})'.format(ls, data[k][ls]['sans-serif']['lang']) for ls in data[k].keys()])
+            lang = ','.join([f'{ls}({data[k][ls]["sans-serif"]["lang"]})'
+                             for ls in data[k].keys()])
             kk = list(data[k].keys())[0]
             s = templ.format(**{'lang': lang,
                                 'sans': data[k][kk]['sans-serif']['family'],
@@ -152,7 +152,7 @@ class HtmlRenderer(DataRenderer):
             tables.append(s)
 
         for k in sorted(missing_b.keys()):
-            lang = '{}({})'.format(k, missing_b[k]['sans-serif']['lang'])
+            lang = f'{k}({missing_b[k]["sans-serif"]["lang"]})'
             templ = '\n'.join(diff_templ)
             s = templ.format(**{'lang': lang,
                                 'old_sans': missing_b[k]['sans-serif']['family'],
@@ -165,7 +165,7 @@ class HtmlRenderer(DataRenderer):
             tables.append(s)
 
         for k in sorted(missing_a.keys()):
-            lang = '{}({})'.format(k, missing_a[k]['sans-serif']['lang'])
+            lang = f'{k}({missing_a[k]["sans-serif"]["lang"]})'
             templ = '\n'.join(diff_templ)
             s = templ.format(**{'lang': lang,
                                 'old_sans': 'N/A',
@@ -179,15 +179,16 @@ class HtmlRenderer(DataRenderer):
 
         for k in diffdata.keys():
             line = ['<tr>']
-            lang = ','.join(['{}({})'.format(ls, diffdata[k][ls][0]['sans-serif']['lang']) for ls in diffdata[k].keys()])
-            line.append('<td class="lang" rowspan="2">{}'.format(lang))
+            lang = ','.join([f'{ls}({diffdata[k][ls][0]["sans-serif"]["lang"]})'
+                             for ls in diffdata[k].keys()])
+            line.append(f'<td class="lang" rowspan="2">{lang}')
             line.append('<td class="original symbol">-</td>')
             diff = []
             kk = list(diffdata[k].keys())[0]
             vv = diffdata[k][kk]
             for a in aliases:
                 if vv[0][a]['family'] == vv[1][a]['family']:
-                    if vv[0][a]['file'] == v[1][a]['file']:
+                    if vv[0][a]['file'] == vv[1][a]['file']:
                         diff.append(None)
                         attr = 'rowspan="2"'
                     else:
@@ -245,9 +246,8 @@ class HtmlRenderer(DataRenderer):
         ]
         header.append(('<div name="note" style="font-size: 10px; color: gray;"'
                        '>Note: No symbols at 2nd column means no difference.'
-                       ' -/+ symbols means there are difference between {} '
-                       'and {}</div>').format(self.imagetype,
-                                              self.imagedifftype))
+                       ' -/+ symbols means there are difference between '
+                       f'{self.imagetype} and {self.imagedifftype}</div>'))
         header.append(('<div name="note" selftyle="font-size: 10px; color: gray;"'
                        f">Legend: - ({self.imagetype}),"
                        f" + ({self.imagedifftype})</div>"))
@@ -266,7 +266,6 @@ class HtmlRenderer(DataRenderer):
         yield '\n'.join(footer) % {'progname': os.path.basename(__file__),
                                    'image': self.imagetype}
 
-
     def __table__(self, data: dict[str, Any]):
         md = [
             'Language | default sans | default serif | default mono',
@@ -278,13 +277,13 @@ class HtmlRenderer(DataRenderer):
                 'serif': 'serif',
                 'monospace': 'mono'
             }
-            s = '{}({}) '.format(k, data[k]['sans-serif']['lang'])
+            s = f'{k}({data[k]["sans-serif"]["lang"]}) '
             for kk, vv in aliases.items():
-                if re.search(r'(?i:{})'.format(vv), data[k][kk]['family']):
+                if re.search(fr'(?i:{vv})', data[k][kk]['family']):
                     attr = '.match'
                 else:
                     attr = '.notmatch'
-                s += '| {} {{ {} }}'.format(data[k][kk]['family'], attr)
+                s += f'| {data[k][kk]["family"]} {{ {attr} }}'
             md.append(s)
 
         header = [
@@ -360,48 +359,51 @@ class ColoredText(str):
         return retval
 
     def cstr(self):
-        return colored(self.__str__(), self.__color, self.__on_color, self.__attrs)
+        return colored(self.__str__(), self.__color,
+                       self.__on_color, self.__attrs)
 
 
 class TextRenderer(DataRenderer):
     """Render text"""
 
-    def __init__(self):
-        super().__init__()
-
     @classmethod
     def format_line(cls, column: list[ColoredText]) -> Iterator[str]:
-        l = []
+        ll = []
         retval = ''
         colsize = int(os.get_terminal_size().columns / len(column))
         colsize = 15 if colsize <= 15 else colsize
         for i, s in enumerate(column):
             n = len(s)
             s = s.cstr() + ' '*(colsize-n)
-            l.append(s)
+            ll.append(s)
             if n >= colsize + 1:
-                yield ' '.join(l)
-                l = []
+                yield ' '.join(ll)
+                ll = []
                 for n in range(i+1):
-                    l.append(' '*colsize)
-        retval = ' '.join(l)
+                    ll.append(' '*colsize)
+        retval = ' '.join(ll)
         if retval.strip():
             yield retval
 
     def __diff__(self, data: dict[str, Any],
-                    missing_a: dict[str, Any],
-                    missing_b: dict[str, Any],
-                    diffdata: dict[str, Any]):
+                 missing_a: dict[str, Any],
+                 missing_b: dict[str, Any],
+                 diffdata: dict[str, Any]):
         out = []
-        for s in TextRenderer.format_line([ColoredText('Language', attrs=['bold']),
-                                           ColoredText('default sans', attrs=['bold']),
-                                           ColoredText('default serif', attrs=['bold']),
-                                           ColoredText('default mono', attrs=['bold'])
+        for s in TextRenderer.format_line([ColoredText('Language',
+                                                       attrs=['bold']),
+                                           ColoredText('default sans',
+                                                       attrs=['bold']),
+                                           ColoredText('default serif',
+                                                       attrs=['bold']),
+                                           ColoredText('default mono',
+                                                       attrs=['bold'])
                                            ]):
             out.append('  ' + s)
         aliases = ['sans-serif', 'serif', 'monospace']
         for k in sorted(data.keys()):
-            lang = ','.join(['{}({})'.format(ls, data[k][ls]['sans-serif']['lang']) for ls in data[k].keys()])
+            lang = ','.join([f'{ls}({data[k][ls]["sans-serif"]["lang"]})'
+                             for ls in data[k].keys()])
             cols = [ColoredText(lang)]
             kk = list(data[k].keys())[0]
             for a in aliases:
@@ -409,7 +411,7 @@ class TextRenderer(DataRenderer):
             for s in TextRenderer.format_line(cols):
                 out.append('  ' + s)
         for k in sorted(missing_b.keys()):
-            lang = '{}({})'.format(k, missing_b[k]['sans-serif']['lang'])
+            lang = f'{k}({missing_b[k]["sans-serif"]["lang"]})'
             cols = [ColoredText(lang)]
             for a in aliases:
                 cols.append(ColoredText(missing_b[k][a]['family']))
@@ -421,7 +423,7 @@ class TextRenderer(DataRenderer):
                                                ColoredText('N/A')]):
                 out.append(colored('+ ' + s, 'green'))
         for k in sorted(missing_a.keys()):
-            lang = '{}({})'.format(k, missing_a[k]['sans-serif']['lang'])
+            lang = f'{k}({missing_a[k]["sans-serif"]["lang"]})'
             cols = [ColoredText(lang)]
             for a in aliases:
                 cols.append(ColoredText(missing_a[k][a]['family']))
@@ -433,7 +435,8 @@ class TextRenderer(DataRenderer):
             for s in TextRenderer.format_line(cols):
                 out.append(colored('+ ' + s, 'green'))
         for k in diffdata.keys():
-            lang = ','.join(['{}({})'.format(ls, diffdata[k][ls][0]['sans-serif']['lang']) for ls in diffdata[k].keys()])
+            lang = ','.join([f'{ls}({diffdata[k][ls][0]["sans-serif"]["lang"]})'
+                             for ls in diffdata[k].keys()])
             origcol = [ColoredText(lang)]
             diffcol = [ColoredText('')]
             kk = list(diffdata[k].keys())[0]
@@ -458,10 +461,14 @@ class TextRenderer(DataRenderer):
 
     def __table__(self, data: dict[str, Any]):
         out = []
-        for s in TextRenderer.format_line([ColoredText('Language', attrs=['bold']),
-                                           ColoredText('default sans', attrs=['bold']),
-                                           ColoredText('default serif', attrs=['bold']),
-                                           ColoredText('default mono', attrs=['bold'])
+        for s in TextRenderer.format_line([ColoredText('Language',
+                                                       attrs=['bold']),
+                                           ColoredText('default sans',
+                                                       attrs=['bold']),
+                                           ColoredText('default serif',
+                                                       attrs=['bold']),
+                                           ColoredText('default mono',
+                                                       attrs=['bold'])
                                            ]):
             out.append(s)
         for k in sorted(data.keys()):
@@ -470,9 +477,9 @@ class TextRenderer(DataRenderer):
                 'serif': 'serif',
                 'monospace': 'mono'
             }
-            cols = [ColoredText('{}({})'.format(k, data[k]['sans-serif']['lang']))]
+            cols = [ColoredText(f'{k}({data[k]["sans-serif"]["lang"]})')]
             for kk, vv in aliases.items():
-                if re.search(r'(?i:{})'.format(vv), data[k][kk]['family']):
+                if re.search(fr'(?i:{vv})', data[k][kk]['family']):
                     cols.append(ColoredText(data[k][kk]['family']))
                 else:
                     cols.append(ColoredText(data[k][kk]['family'], 'red'))
@@ -501,9 +508,9 @@ def json2langgroup(data: dict[str, Any]) -> dict[str, dict[str, Any]]:
     """Restructure JSON format by language group."""
     retval = {}
     for k, v in data.items():
-        key = '{}|{}|{}'.format(v['sans-serif']['family'],
-                                v['serif']['family'],
-                                v['monospace']['family'])
+        key = f'{v["sans-serif"]["family"]}|'\
+            f'{v["serif"]["family"]}|'\
+            f'{v["monospace"]["family"]}'
         if key not in retval:
             retval[key] = {}
         retval[key][k] = v
@@ -519,9 +526,9 @@ def json2langgroupdiff(data: dict[str, Any],
     for k, v in data.items():
         key = ''
         for a in aliases:
-            key += '|{}'.format(v[a]['family'])
+            key += f'|{v[a]["family"]}'
         for a in aliases:
-            key += '|{}'.format(diffdata[k][a]['family'])
+            key += f'|{diffdata[k][a]["family"]}'
         if key not in retval:
             retval[key] = {}
         retval[key][k] = [v, diffdata[k]]
@@ -532,7 +539,8 @@ def json2langgroupdiff(data: dict[str, Any],
 def generate_table(renderer: DataRenderer, title: str, data: dict[str, Any]) -> Iterator[str]:
     """Format data to HTML."""
     sorteddata = json2data(data, False)
-    renderer.title = title.format(product=data['id'], release=data['version_id'],
+    renderer.title = title.format(product=data['id'],
+                                  release=data['version_id'],
                                   target=data['pattern'])
     renderer.imagetype = data['pattern']
     yield from renderer.render_table(sorteddata)
@@ -561,13 +569,17 @@ def generate_diff(renderer: DataRenderer, title: str, data: dict[str, Any],
     langdiffdata = json2langgroupdiff(notmatched, sorteddiffdata)
 
     renderer.title = title.format(product1=data['id'], product2=diffdata['id'],
-                                  release1=data['version_id'], release2=diffdata['version_id'],
-                                  target1=data['pattern'], target2=diffdata['pattern'])
+                                  release1=data['version_id'],
+                                  release2=diffdata['version_id'],
+                                  target1=data['pattern'],
+                                  target2=diffdata['pattern'])
     renderer.imagetype = data['pattern']
     renderer.imagedifftype = diffdata['pattern']
 
-    yield from renderer.render_diff(langdata, missing_a, missing_b, langdiffdata)
-    yield True if not missing_a and not missing_b and not langdiffdata else False
+    yield from renderer.render_diff(langdata, missing_a,
+                                    missing_b, langdiffdata)
+    yield not missing_a and not missing_b and not langdiffdata
+
 
 def run(mode, in1, in2, out, renderer, title):
     data = None
@@ -592,6 +604,7 @@ def run(mode, in1, in2, out, renderer, title):
             raise RuntimeError('No such mode is supported: ' + mode)
 
     return ret
+
 
 def main():
     """Endpoint to execute fq2html program."""
@@ -631,7 +644,8 @@ def main():
         sys.exit(0)
 
     ret = run('table' if args.diff is None else 'diff',
-              args.FILE, args.diff, args.output, renderer[args.render](), args.title)
+              args.FILE, args.diff, args.output, renderer[args.render](),
+              args.title)
 
     sys.exit(0 if ret else 1)
 

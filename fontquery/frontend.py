@@ -1,5 +1,5 @@
 # frontend.py
-# Copyright (C) 2022-2023 Red Hat, Inc.
+# Copyright (C) 2022-2024 Red Hat, Inc.
 #
 # Authors:
 #   Akira TAGOH  <tagoh@redhat.com>
@@ -25,7 +25,6 @@
 
 import argparse
 import importlib.metadata
-import os
 import re
 import shutil
 import subprocess
@@ -33,6 +32,7 @@ import sys
 import tempfile
 import warnings
 from collections import Counter
+from pathlib import Path
 try:
     import fontquery_debug  # noqa: F401
 except ModuleNotFoundError:
@@ -40,12 +40,11 @@ except ModuleNotFoundError:
 import fontquery.htmlformatter  # noqa: F401
 try:
     from fontquery import client  # noqa: F401
-    local_not_supported = False
+    LOCAL_NOT_SUPPORTED = False
 except ModuleNotFoundError:
-    local_not_supported = True
+    LOCAL_NOT_SUPPORTED = True
 from fontquery.cache import FontQueryCache  # noqa: F401
 from fontquery.container import ContainerImage  # noqa: F401
-from pathlib import Path
 
 
 def run(release, args):
@@ -53,8 +52,6 @@ def run(release, args):
         if re.match(r'\d+(\-development)?$', release):
             release = 'stream' + release
     if release == 'local':
-        if args.mode == 'fcmatchaliases':
-            print('* This may take some time...', file=sys.stderr)
         fqcexec = 'fontquery-client'
         if not shutil.which(fqcexec):
             fqcexec = client.__file__
@@ -66,7 +63,6 @@ def run(release, args):
                         [' '.join(['-l=' + ls
                                    for ls in args.lang])]) + args.args
     else:
-        print('* This may take some time...', file=sys.stderr)
         if not args.disable_update:
             c = ContainerImage(args.product, release, args.verbose)
             c.target = args.target
@@ -74,8 +70,9 @@ def run(release, args):
                 raise RuntimeError('`podman pull\' failed')
         cmdline = [
             'podman', 'run', '--rm',
-            'ghcr.io/fedora-i18n/fontquery/{}/{}:{}'.format(
-                args.product, args.target, release), '-m', args.mode
+            'ghcr.io/fedora-i18n/fontquery/'
+            f'{args.product}/{args.target}:{release}',
+            '-m', args.mode
         ] + (['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
              else []) + ([] if args.lang is None else
                          ['-l=' + ls
@@ -84,10 +81,11 @@ def run(release, args):
     if args.verbose:
         print('# ' + ' '.join(cmdline), file=sys.stderr)
 
-    result = subprocess.run(cmdline, stdout=subprocess.PIPE)
+    result = subprocess.run(cmdline, stdout=subprocess.PIPE, check=False)
     if result.returncode != 0:
         sys.tracebacklimit = 0
-        raise RuntimeError('`podman run\' failed with the error code {}'.format(result.returncode))
+        raise RuntimeError('`podman run\' failed with '
+                           f'the error code {result.returncode}')
 
     return result.stdout.decode('utf-8')
 
@@ -133,19 +131,23 @@ def main():
                         help='Clean caches before processing')
     parser.add_argument('--disable-cache',
                         action='store_true',
-                        help='Enforce processing everything even if not updating')
+                        help='Enforce processing everything '
+                        'even if not updating')
     parser.add_argument('--disable-update',
                         action='store_true',
                         help='Do not update the container image')
     parser.add_argument('-f',
                         '--filename-format',
                         default='{product}-{release}-{target}.{mode}',
-                        help='Output filename format. only take effects with --mode=html or using multiple --release option')
+                        help='Output filename format. only take effects '
+                        'with --mode=html or using multiple --release option')
     parser.add_argument('-r',
                         '--release',
                         default=defrel,
                         action='append',
-                        help='Release number such as "rawhide" and "39". "local" to query from current environment instead of images')
+                        help='Release number such as "rawhide" and "39". '
+                        '"local" to query from current environment instead '
+                        'of images')
     parser.add_argument('-l',
                         '--lang',
                         action='append',
@@ -173,7 +175,8 @@ def main():
     parser.add_argument('-T',
                         '--title',
                         default='{product} {release}: {target}',
-                        help='Page title format. only take effects with --mode=html')
+                        help='Page title format. only take effects '
+                        'with --mode=html')
     parser.add_argument('-v',
                         '--verbose',
                         action='count',
@@ -193,7 +196,7 @@ def main():
 
     out = None
     origmode = args.mode
-    redirect = True if args.mode == 'html' else False
+    redirect = args.mode == 'html'
     if redirect:
         args.mode = 'json'
     if args.version:
@@ -201,41 +204,48 @@ def main():
         sys.exit(0)
     ofile = str(Path(args.output_dir) / args.filename_format)
     if args.verbose:
-        print('* Product: {}'.format(args.product), file=sys.stderr)
-        print('* Release: {}'.format(args.release), file=sys.stderr)
-        print('* Target: {}'.format(args.target), file=sys.stderr)
-        print('* Language: {}'.format(args.lang), file=sys.stderr)
-        print('* Mode: {}'.format(args.mode), file=sys.stderr)
-        print('* Output: {}'.format(ofile), file=sys.stderr)
+        print(f'* Product: {args.product}', file=sys.stderr)
+        print(f'* Release: {args.release}', file=sys.stderr)
+        print(f'* Target: {args.target}', file=sys.stderr)
+        print(f'* Language: {args.lang}', file=sys.stderr)
+        print(f'* Mode: {args.mode}', file=sys.stderr)
+        print(f'* Output: {ofile}', file=sys.stderr)
 
     if 'local' in args.release:
-        if local_not_supported:
+        if LOCAL_NOT_SUPPORTED:
             raise TypeError('local query feature is not available.')
         if args.target != parser.get_default('target'):
-            warnings.warn("target option won't take any effects on local mode", RuntimeWarning, stacklevel=2)
+            warnings.warn("target option won't take any effects on local mode",
+                          RuntimeWarning, stacklevel=2)
     else:
         if not shutil.which('podman'):
             print('podman is not installed')
             sys.exit(1)
 
     for r in args.release:
-        out = load(r, args, not args.lang and not args.disable_cache and args.mode == 'json')
+        out = load(r, args, not args.lang and not args.disable_cache and
+                   args.mode == 'json')
         if redirect:
             with tempfile.NamedTemporaryFile(mode='w+') as tmp:
                 tmp.write(out)
                 tmp.seek(0)
                 with open(ofile.format(product=args.product, release=r,
-                                       target=args.target, mode=origmode), 'w') as fw:
-                    fontquery.htmlformatter.run('table', tmp, None, fw, fontquery.htmlformatter.HtmlRenderer(),
-                                                args.title.format(product=args.product,
-                                                                  release=r,
-                                                                  target=args.target))
+                                       target=args.target, mode=origmode),
+                          'w', encoding='utf-8') as fw:
+                    title = args.title.format(product=args.product,
+                                              release=r,
+                                              target=args.target)
+                    fontquery.htmlformatter.run('table', tmp, None, fw,
+                                                fontquery.htmlformatter
+                                                .HtmlRenderer(),
+                                                title)
         else:
             if len(args.release) == 1 and args.mode != 'json':
                 print(out)
             else:
                 with open(ofile.format(product=args.product, release=r,
-                                       target=args.target, mode=origmode), 'w') as fw:
+                                       target=args.target, mode=origmode),
+                          'w', encoding='utf-8') as fw:
                     fw.write(out)
 
 

@@ -1,5 +1,5 @@
 # client.py
-# Copyright (C) 2022 Red Hat, Inc.
+# Copyright (C) 2022-2024 Red Hat, Inc.
 #
 # Authors:
 #   Akira TAGOH  <tagoh@redhat.com>
@@ -26,25 +26,22 @@
 import argparse
 import csv
 import json
-import langtable
 import re
 import shutil
 import subprocess
 import sys
 import types
-import os
 from collections import Counter
 from pathlib import Path
+import langtable
 try:
-    import fontquery_debug # noqa: F401
+    import fontquery_debug  # noqa: F401
 except ModuleNotFoundError:
     pass
 from fontquery import version
 try:
     from pyanaconda import localization
-    defaultLangList = [
-        lang for lang in localization.get_available_translations()
-    ]
+    defaultLangList = list(localization.get_available_translations())
 except ModuleNotFoundError:
     defaultLangList = [
         'aa', 'ab', 'af', 'ak', 'am', 'an', 'ar', 'as', 'ast', 'av', 'ay',
@@ -77,7 +74,7 @@ except ModuleNotFoundError:
 def dump(params: object) -> str:
     """Dump fontquery result in JSON."""
     p = Path('/etc/os-release')
-    with open(p) as f:
+    with open(p, encoding='utf-8') as f:
         reader = csv.reader(f, delimiter='=')
         os_release = dict(reader)
     langname = {
@@ -99,18 +96,23 @@ def dump(params: object) -> str:
         'fq_id': fqver,
         'fonts': [],
     }
-    for ls in params.lang:
+    for i, ls in enumerate(params.lang, 1):
+        print(f'* This may take some time...({i}/{len(params.lang)})\r',
+              end="", file=sys.stderr)
         for f in params.family:
             cmdline = [
                 'fc-match', '-f',
                 ('%{file:-<unknown filename|basename},'
                  '%{family[0]:-<unknown family>},'
                  '%{style[0]:-<unknown style>}\\n'),
-                '{}:lang={}'.format(f, ls.replace('_','-'))
+                f'{f}:lang={ls.replace("_", "-")}'
             ]
             if params.verbose:
                 print('# ' + ' '.join(cmdline), flush=True, file=sys.stderr)
-            retval = subprocess.run(cmdline, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            retval = subprocess.run(cmdline,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE,
+                                    check=False)
 
             cond_empty = re.compile(r'^$')
             out = [
@@ -126,8 +128,10 @@ def dump(params: object) -> str:
                 'family': data[1],
                 'style': data[2]
             })
+    print('', file=sys.stderr)
 
     return json.dumps(jsons, indent=4)
+
 
 def fcmatchaliases(params: object) -> str:
     """Show results of generic aliases"""
@@ -135,19 +139,24 @@ def fcmatchaliases(params: object) -> str:
     if not shutil.which('fc-match'):
         print('fc-match is not installed', file=sys.stderr)
         sys.exit(1)
-    for ls in params.lang:
+    for i, ls in enumerate(params.lang, 1):
+        print(f'* This may take some time...({i}/{len(params.lang)})\r',
+              end="", file=sys.stderr)
         if len(params.lang) > 1:
-            results.append("{}:".format(ls))
+            results.append(f"{ls}:")
         for a in ['sans-serif', 'serif', 'monospace', 'system-ui']:
             cmdline = [
                 'fc-match', '-f',
-                ('  ({}):\t  \"%{{family[0]:-<unknown family>}}\" '
-                 '\"%{{style[0]:-<unknown style>}}\"').format(a),
-                ':family={}:lang={}'.format(a, ls.replace('_','-'))
+                (f'  ({a}):\t  \"%{{family[0]:-<unknown family>}}\" '
+                 '\"%{style[0]:-<unknown style>}\"'),
+                f':family={a}:lang={ls.replace("_", "-")}'
             ]
             if params.verbose:
                 print('# ' + ' '.join(cmdline), flush=True, file=sys.stderr)
-            retval = subprocess.run(cmdline, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            retval = subprocess.run(cmdline,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE,
+                                    check=False)
 
             cond_empty = re.compile(r'^$')
             out = [
@@ -155,8 +164,10 @@ def fcmatchaliases(params: object) -> str:
                 if not cond_empty.match(s)
             ]
             results += out
+    print('', file=sys.stderr)
 
     return "\n".join(results)
+
 
 def checkupdate(params: object) -> str:
     if not shutil.which('fontquery-setup.sh'):
@@ -167,8 +178,9 @@ def checkupdate(params: object) -> str:
     ]
     if params.verbose:
         print('# ' + ' '.join(cmdline), flush=True, file=sys.stderr)
-    res = subprocess.run(cmdline)
+    res = subprocess.run(cmdline, check=False)
     sys.exit(res.returncode)
+
 
 def update(params: object) -> str:
     if not shutil.which('fontquery-setup.sh'):
@@ -179,8 +191,9 @@ def update(params: object) -> str:
     ]
     if params.verbose:
         print('# ' + ' '.join(cmdline), flush=True, file=sys.stderr)
-    res = subprocess.run(cmdline)
+    res = subprocess.run(cmdline, check=False)
     sys.exit(res.returncode)
+
 
 def main():
     """Endpoint to execute fontquery-client program."""
@@ -257,17 +270,20 @@ def main():
         print(fccmd[args.mode](args))
     else:
         if not shutil.which(fccmd[args.mode]):
-            print('{} is not installed'.format(fccmd[args.mode]),
+            print(f'{fccmd[args.mode]} is not installed',
                   file=sys.stderr)
             sys.exit(1)
 
         if args.lang != fclangs:
-            print('W: lang option does not take any effects. Please use :lang fcpattern instead', flush=True, file=sys.stderr)
+            print('W: lang option does not take any effects. '
+                  'Please use :lang fcpattern instead',
+                  flush=True, file=sys.stderr)
         cmdline = [fccmd[args.mode]] + args.args
         if args.verbose:
             print('# ' + ' '.join(cmdline), flush=True, file=sys.stderr)
 
-        subprocess.run(cmdline)
+        subprocess.run(cmdline, check=False)
+
 
 if __name__ == '__main__':
     main()

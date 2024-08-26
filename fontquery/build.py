@@ -1,5 +1,5 @@
 # build.py
-# Copyright (C) 2022-2023 Red Hat, Inc.
+# Copyright (C) 2022-2024 Red Hat, Inc.
 #
 # Authors:
 #   Akira TAGOH  <tagoh@redhat.com>
@@ -28,10 +28,36 @@ import os
 import argparse
 import shutil
 try:
-    import fontquery_debug # noqa: F401
+    import fontquery_debug  # noqa: F401
 except ModuleNotFoundError:
     pass
-from fontquery import container # noqa: F401
+from fontquery import container  # noqa: F401
+
+
+def do_build(product, release, target, push, args):
+    bldr = container.ContainerImage(product, release, args.verbose)
+    if not args.skip_build:
+        bldr.target = target
+        if args.rmi:
+            bldr.clean(**vars(args))
+        if args.update:
+            if not bldr.update(**vars(args)):
+                return False
+        else:
+            if not bldr.build(**vars(args)):
+                return False
+    if push:
+        if not bldr.push(**vars(args)):
+            return False
+    return True
+
+
+def do_push(product, release, target, args):
+    bldr = container.ContainerImage(product, release, args.verbose)
+    bldr.target = target
+    if not bldr.push(**vars(args)):
+        return False
+    return True
 
 
 def main():
@@ -93,44 +119,26 @@ def main():
         print('buildah is not installed')
         sys.exit(1)
 
-    bldr = container.ContainerImage(args.product, args.release, args.verbose)
     if args.update and args.rmi:
-        print('Warning: --rmi and --update option are conflict each other. Disabling --rmi.')
+        print('Warning: --rmi and --update option are conflict each other.'
+              ' Disabling --rmi.')
         args.rmi = False
     if args.skip_build and args.update:
-        print('Warning: --skip-build and --update option are conflict each other. Disabling --update.')
+        print('Warning: --skip-build and --update option are conflict each'
+              ' other. Disabling --update.')
         args.update = False
     if args.target:
-        bldr.target = args.target
-        if not args.skip_build:
-            if args.rmi:
-                bldr.clean(**vars(args))
-            if args.update:
-                if not bldr.update(**vars(args)):
-                    sys.exit(1)
-            else:
-                if not bldr.build(**vars(args)):
-                    sys.exit(1)
-        if args.push:
-            if not bldr.push(**vars(args)):
-                sys.exit(1)
+        if not do_build(args.product, args.release, args.target,
+                        args.push, args):
+            sys.exit(1)
     else:
         target = ['minimal', 'extra', 'all']
-        if not args.skip_build:
-            for t in target:
-                bldr.target = t
-                if args.rmi:
-                    bldr.clean(**vars(args))
-                if args.update:
-                    if not bldr.update(**vars(args)):
-                        sys.exit(1)
-                else:
-                    if not bldr.build(**vars(args)):
-                        sys.exit(1)
+        for t in target:
+            if not do_build(args.product, args.release, t, False, args):
+                sys.exit(1)
         if args.push:
             for t in target:
-                bldr.target = t
-                if not bldr.push(**vars(args)):
+                if not do_push(args.product, args.release, t, args):
                     sys.exit(1)
 
 

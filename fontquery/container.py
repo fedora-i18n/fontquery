@@ -46,7 +46,10 @@ try:
     FQ_VERSION = importlib.metadata.version('fontquery')
 except ModuleNotFoundError:
     import tomli
-    FQ_VERSION = tomli.load(open(Path(__file__).parent.parent / 'pyproject.toml', 'rb'))['project']['version']
+    tomlfile = Path(__file__).parent.parent / 'pyproject.toml'
+    with open(tomlfile, 'rb', encoding='utf-8') as f:
+        FQ_VERSION = tomli.load(f)['project']['version']
+
 
 class ContainerImage:
     """Container helper"""
@@ -71,10 +74,10 @@ class ContainerImage:
     def _get_namespace(self) -> str:
         if not self.__target:
             raise RuntimeError('No target is set')
-        return 'fontquery/{}/{}:{}'.format(self.__product, self.__target, self.__version)
+        return f'fontquery/{self.__product}/{self.__target}:{self.__version}'
 
     def _get_fullnamespace(self) -> str:
-        return 'ghcr.io/fedora-i18n/{}'.format(self._get_namespace())
+        return f'ghcr.io/fedora-i18n/{self._get_namespace()}'
 
     @property
     def target(self) -> str:
@@ -84,7 +87,7 @@ class ContainerImage:
     def target(self, v: str) -> None:
         self.__target = v
 
-    def exists(self, remote = True) -> bool:
+    def exists(self, remote=True) -> bool:
         """Whether the image is available or not"""
         if not remote:
             cmdline = [
@@ -109,7 +112,7 @@ class ContainerImage:
         if self.__verbose:
             print('# ' + ' '.join(cmdline))
         if not ('try_run' in kwargs and kwargs['try_run']):
-            ret = subprocess.run(cmdline)
+            ret = subprocess.run(cmdline, check=False)
             return ret.returncode == 0
 
         return True
@@ -118,34 +121,40 @@ class ContainerImage:
         """Build an image"""
         retval = True
         if self.exists(remote=False):
-            print('Warning: {} is already available on local. You may want to remove older images manually.'.format(self._get_namespace()), file=sys.stderr)
+            print(f'Warning: {self._get_namespace()} is already'
+                  ' available on local. '
+                  'You may want to remove older images manually.',
+                  file=sys.stderr)
         with tempfile.TemporaryDirectory() as tmpdir:
             abssetup = FQ_SCRIPT_PATH.joinpath('fontquery-setup.sh')
             setup = str(abssetup.name)
             devpath = Path(__file__).parents[1]
-            sdist = str(devpath / 'dist' / 'fontquery-{}*.whl'.format(FQ_VERSION))
-            dist = '' if not 'debug' in kwargs or not kwargs['debug'] else glob.glob(sdist)[0]
+            sdist = str(devpath / 'dist' / f'fontquery-{FQ_VERSION}*.whl')
+            dist = '' if 'debug' not in kwargs or not kwargs['debug']\
+                else glob.glob(sdist)[0]
             containerfile = str(FQ_DATA_PATH.joinpath('Containerfile'))
             if dist:
                 # Use all files from development
-                containerfile = str(devpath / 'fontquery' / 'data' / 'Containerfile')
-                abssetup = str(devpath / 'fontquery' / 'scripts' / 'fontquery-setup.sh')
+                containerfile = str(devpath / 'fontquery' / 'data' /
+                                    'Containerfile')
+                abssetup = str(devpath / 'fontquery' / 'scripts' /
+                               'fontquery-setup.sh')
                 shutil.copy2(dist, tmpdir)
             shutil.copy2(abssetup, tmpdir)
             cmdline = [
                 'buildah', 'build', '-f', containerfile,
-                '--build-arg', 'registry={}'.format(self.__registry),
-                '--build-arg', 'release={}'.format(self.__version),
-                '--build-arg', 'setup={}'.format(setup),
-                '--build-arg', 'dist={}'.format(Path(dist).name),
+                '--build-arg', f'registry={self.__registry}',
+                '--build-arg', f'release={self.__version}',
+                '--build-arg', f'setup={setup}',
+                '--build-arg', f'dist={Path(dist).name}',
                 '--target', self.target, '-t',
-                'ghcr.io/fedora-i18n/{}'.format(self._get_namespace()),
+                f'ghcr.io/fedora-i18n/{self._get_namespace()}',
                 tmpdir
             ]
             if self.__verbose:
                 print('# ' + ' '.join(cmdline))
             if not ('try_run' in kwargs and kwargs['try_run']):
-                ret = subprocess.run(cmdline, cwd=tmpdir)
+                ret = subprocess.run(cmdline, cwd=tmpdir, check=False)
                 retval = ret.returncode == 0
 
         return retval
@@ -153,11 +162,9 @@ class ContainerImage:
     def update(self, *args, **kwargs) -> bool:
         """Update an image"""
         if not self.exists(remote=True):
-            raise RuntimeError("Image isn't yet available. try build first: {}".format(self._get_namespace()))
-        abssetup = FQ_SCRIPT_PATH.joinpath('fontquery-setup.sh')
-        setuppath = str(abssetup.parent)
-        setup = str(abssetup.name)
-        cname = 'fontquery-{}'.format(os.getpid())
+            raise RuntimeError("Image isn't yet available. "
+                               f"try build first: {self._get_namespace()}")
+        cname = f'fontquery-{os.getpid()}'
         cmdline = [
             'podman', 'run', '-ti', '--name', cname,
             self._get_fullnamespace(),
@@ -170,19 +177,19 @@ class ContainerImage:
             print('# ' + ' '.join(cmdline))
         if not ('try_run' in kwargs and kwargs['try_run']):
             try:
-                res = subprocess.run(cmdline)
+                res = subprocess.run(cmdline, check=False)
                 if res.returncode != 0:
-                    subprocess.run(cleancmdline)
+                    subprocess.run(cleancmdline, check=False)
                     cmdline[-1] = 'update'
                     if self.__verbose:
                         print('# ' + ' '.join(cmdline))
-                    res = subprocess.run(cmdline)
+                    res = subprocess.run(cmdline, check=False)
                     if res.returncode == 0:
                         cmdline = [
                             'podman', 'commit', cname,
                             self._get_fullnamespace()
                         ]
-                        res = subprocess.run(cmdline)
+                        res = subprocess.run(cmdline, check=False)
                         if res.returncode == 0:
                             print('** Image has been changed.')
                         else:
@@ -196,37 +203,40 @@ class ContainerImage:
             finally:
                 if self.__verbose:
                     print('# ' + ' '.join(cleancmdline))
-                subprocess.run(cleancmdline)
+                subprocess.run(cleancmdline, check=False)
 
         return True
 
     def clean(self, *args, **kwargs) -> None:
         """Clean up an image"""
         if not self.exists(remote=False):
-            print("Warning: {} isn't available on local. You don't need to clean up.".format(self._get_namespace()), file=sys.stderr)
+            print(f"Warning: {self._get_namespace()} isn't available on local. "
+                  "You don't need to clean up.",
+                  file=sys.stderr)
             return
         cmdline = [
             'buildah', 'rmi',
-            'ghcr.io/fedora-i18n/{}'.format(self._get_namespace())
+            f'ghcr.io/fedora-i18n/{self._get_namespace()}'
         ]
         if self.__verbose:
             print('# ' + ' '.join(cmdline))
         if not ('try_run' in kwargs and kwargs['try_run']):
-            subprocess.run(cmdline)
+            subprocess.run(cmdline, check=False)
 
     def push(self, *args, **kwargs) -> bool:
         """Publish an image to registry"""
         if not self.exists(remote=False):
-            print("Warning: {} isn't available on local.".format(self._get_namespace()))
-            return
+            print(f"Warning: {self._get_namespace()} isn't"
+                  " available on local.")
+            return False
         cmdline = [
             'buildah', 'push',
-            'ghcr.io/fedora-i18n/{}'.format(self._get_namespace())
+            f'ghcr.io/fedora-i18n/{self._get_namespace()}'
         ]
         if self.__verbose:
             print('# ' + ' '.join(cmdline))
         if not ('try_run' in kwargs and kwargs['try_run']):
-            ret = subprocess.run(cmdline)
+            ret = subprocess.run(cmdline, check=False)
             return ret.returncode == 0
 
         return True

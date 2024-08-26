@@ -15,8 +15,10 @@ class FontQueryCache:
 
     def __init__(self, platform, release, target):
         self._base_cachedir = BaseDirectory.save_cache_path('fontquery')
-        self._cachedir = Path(self._base_cachedir) / '{}-{}-{}'.format(platform, release, target)
-        self._repo = 'ghcr.io/fedora-i18n/fontquery/{}/{}:{}'.format(platform, target, release)
+        self._cachedir = Path(self._base_cachedir) /\
+            f'{platform}-{release}-{target}'
+        self._repo = f'ghcr.io/fedora-i18n/fontquery/{platform}/'\
+            f'{target}:{release}'
         if not self._cachedir.exists():
             self._cachedir.mkdir()
 
@@ -29,17 +31,19 @@ class FontQueryCache:
         cmdline = [
             'podman', 'images', '-a', '--no-trunc', self._repo
         ]
-        res = subprocess.run(cmdline, stdout=subprocess.PIPE)
+        res = subprocess.run(cmdline, stdout=subprocess.PIPE, check=False)
         if res.returncode != 0:
             sys.tracebacklimit = 0
-            raise RuntimeError('`podman images\' failed with the error code {}'.format(res.returncode))
+            raise RuntimeError('`podman images\' failed with'
+                               f' the error code {res.returncode}')
         out = res.stdout.decode('utf-8')
         result = []
-        for l in out.splitlines():
-            result.append(l.split())
+        for ll in out.splitlines():
+            result.append(ll.split())
         if len(result) < 2:
-            raise RuntimeError('No images available: {}'.format(self._repo))
-        tag = result[1][[i for i in range(len(result[0])) if result[0][i] == 'IMAGE'][0]]
+            raise RuntimeError('No images available: {self._repo}')
+        tag = result[1][[i for i in range(len(result[0]))
+                         if result[0][i] == 'IMAGE'][0]]
         cmdline = [
             'podman', 'inspect', tag
         ]
@@ -54,7 +58,7 @@ class FontQueryCache:
         except RuntimeError:
             return None
         try:
-            with open(fn) as f:
+            with open(fn, encoding='utf-8') as f:
                 out = f.read()
         except FileNotFoundError:
             pass
@@ -67,7 +71,7 @@ class FontQueryCache:
             fn = self.filename
         except RuntimeError:
             return False
-        with open(fn, 'w') as f:
+        with open(fn, 'w', encoding='utf-8') as f:
             f.write(s)
 
         return True
