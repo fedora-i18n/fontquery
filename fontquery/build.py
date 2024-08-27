@@ -36,8 +36,8 @@ from fontquery import container  # noqa: F401
 
 def do_build(product, release, target, push, args):
     bldr = container.ContainerImage(product, release, args.verbose)
+    bldr.target = target
     if not args.skip_build:
-        bldr.target = target
         if args.rmi:
             bldr.clean(**vars(args))
         if args.update:
