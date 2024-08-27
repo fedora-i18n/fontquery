@@ -76,23 +76,23 @@ $ fontquery -r 36 sans-serif:lang=hi
 Lohit-Devanagari.ttf: "Lohit Devanagari" "Regular"
 ```
 
-To generate JSON from langpacks installed environment:
+To generate JSON from default-fonts installed environment:
 
 ``` shell
-$ fontquery -m json -t langpacks
+$ fontquery -m json -t minimal
 ...
 ```
 
 To generate html table:
 
 ``` shell
-$ fontquery -m json -t langpacks | fq2html -o langpacks.html -
+$ fontquery -m json -t minimal | fq2html -o minimal.html -
 ```
 
 Or simply
 
 ``` shell
-$ fontquery -m html -t langpacks -r 40
+$ fontquery -m html -t minimal -r 40
 ```
 
 To check difference between local and reference:
