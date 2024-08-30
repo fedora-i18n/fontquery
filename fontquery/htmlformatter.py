@@ -279,10 +279,18 @@ class HtmlRenderer(DataRenderer):
             }
             s = f'{k}({data[k]["sans-serif"]["lang"]}) '
             for kk, vv in aliases.items():
-                if re.search(fr'(?i:{vv})', data[k][kk]['family']):
-                    attr = '.match'
+                if 'is_default' not in data[k][kk]:
+                    if re.search(fr'(?i:{vv})', data[k][kk]['family']):
+                        attr = '.match'
+                    else:
+                        attr = '.notmatch'
                 else:
-                    attr = '.notmatch'
+                    if data[k][kk]['is_default'] == 1:
+                        attr = '.match'
+                    elif data[k][kk]['is_default'] == 0:
+                        attr = '.notmatch'
+                    else:
+                        attr = '.dontcare'
                 s += f'| {data[k][kk]["family"]} {{ {attr} }}'
             md.append(s)
 
@@ -303,6 +311,9 @@ class HtmlRenderer(DataRenderer):
             '.match {',
             '}',
             '.notmatch {',
+            '  color: red',
+            '}',
+            '.dontcare {',
             '  color: orange',
             '}',
             '</style></head>',
@@ -539,9 +550,10 @@ def json2langgroupdiff(data: dict[str, Any],
 def generate_table(renderer: DataRenderer, title: str, data: dict[str, Any]) -> Iterator[str]:
     """Format data to HTML."""
     sorteddata = json2data(data, False)
-    renderer.title = title.format(product=data['id'],
-                                  release=data['version_id'],
-                                  target=data['pattern'])
+    if title:
+        renderer.title = title.format(product=data['id'],
+                                      release=data['version_id'],
+                                      target=data['pattern'])
     renderer.imagetype = data['pattern']
     yield from renderer.render_table(sorteddata)
 
