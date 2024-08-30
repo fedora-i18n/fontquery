@@ -126,7 +126,7 @@ def dump(params: object) -> str:
             try:
                 pkgname = list(Font2Package.get_package_name_from_file(data[0]))[0]
                 repo = PackageRepo(cache, pkgname, data[1])
-                if ls in repo.languages:
+                if ls.replace('-', '_') in repo.languages:
                     if f == 'sans-serif':
                         is_default = repo.is_default_sans
                     elif f == 'serif':
