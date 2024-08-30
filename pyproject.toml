@@ -28,6 +28,7 @@ dependencies = [
   "langtable",
   "pyxdg",
   "termcolor",
+  "pyyaml",
 ]
 
 [project.urls]
