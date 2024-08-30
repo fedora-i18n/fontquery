@@ -39,6 +39,7 @@ try:
 except ModuleNotFoundError:
     pass
 from fontquery import version
+from fontquery.package import PackageRepoCache, PackageRepo, Font2Package, PackageNotFound
 try:
     from pyanaconda import localization
     defaultLangList = list(localization.get_available_translations())
@@ -96,13 +97,14 @@ def dump(params: object) -> str:
         'fq_id': fqver,
         'fonts': [],
     }
+    cache = PackageRepoCache()
     for i, ls in enumerate(params.lang, 1):
         print(f'* This may take some time...({i}/{len(params.lang)})\r',
               end="", file=sys.stderr)
         for f in params.family:
             cmdline = [
                 'fc-match', '-f',
-                ('%{file:-<unknown filename|basename},'
+                ('%{file:-<unknown filename>},'
                  '%{family[0]:-<unknown family>},'
                  '%{style[0]:-<unknown style>}\\n'),
                 f'{f}:lang={ls.replace("_", "-")}'
@@ -120,13 +122,31 @@ def dump(params: object) -> str:
                 if not cond_empty.match(s)
             ]
             data = [item.split(',') for item in out][0]
+            is_default = 2
+            try:
+                pkgname = list(Font2Package.get_package_name_from_file(data[0]))[0]
+                repo = PackageRepo(cache, pkgname, data[1])
+                if ls in repo.languages:
+                    if f == 'sans-serif':
+                        is_default = repo.is_default_sans
+                    elif f == 'serif':
+                        is_default = repo.is_default_serif
+                    elif f == 'monospace':
+                        is_default = repo.is_default_mono
+                    else:
+                        is_default = 2
+                else:
+                    is_default = 2
+            except PackageNotFound:
+                pass
             jsons['fonts'].append({
                 'lang': ls,
                 'lang_name': langname[ls],
                 'alias': f,
-                'file': data[0],
+                'file': Path(data[0]).name,
                 'family': data[1],
-                'style': data[2]
+                'style': data[2],
+                'is_default': is_default
             })
     print('', file=sys.stderr)
 
