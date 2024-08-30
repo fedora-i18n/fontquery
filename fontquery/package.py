@@ -130,7 +130,7 @@ class PackageRepoCache:
     def get(self, pkg: str) -> tempfile.TemporaryDirectory:
         if pkg not in self._cache:
             tmpdir = tempfile.TemporaryDirectory()
-            cmdline = ['fedpkg', 'clone', pkg, tmpdir.name]
+            cmdline = ['git', 'clone', f'https://src.fedoraproject.org/rpms/{pkg}.git', tmpdir.name]
             retval = subprocess.run(cmdline,
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE,
@@ -152,8 +152,8 @@ class PackageRepo:
         self._is_default_serif = 0
         self._is_default_mono = 0
         self._lang_coverage = ['en']
-        if not shutil.which('fedpkg'):
-            raise RuntimeError('No fedpkg installed')
+        if not shutil.which('git'):
+            raise RuntimeError('No git installed')
         srpm = list(Font2Package.get_source_package_name(pkg))[0]
         tmpdir = cache.get(srpm)
         self._parse_plan(tmpdir.name, pkg, family)

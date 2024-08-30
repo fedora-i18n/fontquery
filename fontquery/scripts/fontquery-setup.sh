@@ -160,7 +160,7 @@ case "$ID" in
                 echo "** Removing macros.image-language-conf if any"; rm -f /etc/rpm/macros.image-language-conf
                 echo "** Updating all base packages"; $DNF -y update $DNFOPT --setopt=protected_packages=,
                 echo "** Installing fontconfig"; $DNF -y $DNFOPT install fontconfig
-                echo "** Installing fedpkg"; $DNF -y install fedpkg
+                echo "** Installing git"; $DNF -y install git
                 echo "** Installing anaconda-core"; $DNF -y $DNFOPT install anaconda-core
                 if [ $VERSION_ID -le 9 ]; then
                     echo "** Installing python packages"; $DNF -y $DNFOPT install python3.11-pip
@@ -204,7 +204,7 @@ case "$ID" in
                 echo "** Removing macros.image-language-conf if any"; rm -f /etc/rpm/macros.image-language-conf
                 echo "** Updating all base packages"; $DNF -y update --setopt=protected_packages=,
                 echo "** Installing fontconfig"; $DNF -y install fontconfig
-                echo "** Installing fedpkg"; $DNF -y install fedpkg
+                echo "** Installing git"; $DNF -y install git
                 echo "** Installing anaconda-core"; $DNF -y install anaconda-core
                 echo "** Installing python packages"; $DNF -y install python3-pip
                 echo "** Cleaning up dnf cache"; $DNF -y clean all
