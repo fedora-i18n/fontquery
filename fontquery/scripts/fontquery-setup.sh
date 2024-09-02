@@ -60,8 +60,8 @@ update_fontquery() {
         $PIP install /tmp/$(basename $DIST)
     else
         echo "** Installing fontquery from PyPI"
-        echo $PIP install "fontquery >= 1.18"
-        $PIP install "fontquery >= 1.18"
+        echo $PIP install "fontquery >= 1.19"
+        $PIP install "fontquery >= 1.19"
     fi
     rm /tmp/fontquery* || :
 }
