@@ -97,7 +97,7 @@ def dump(params: object) -> str:
         'fq_id': fqver,
         'fonts': [],
     }
-    cache = PackageRepoCache()
+    cache = PackageRepoCache(product=os_release['ID'])
     for i, ls in enumerate(params.lang, 1):
         print(f'* This may take some time...({i}/{len(params.lang)})\r',
               end="", file=sys.stderr)
@@ -125,7 +125,7 @@ def dump(params: object) -> str:
             is_default = 2
             try:
                 pkgname = list(Font2Package.get_package_name_from_file(data[0]))[0]
-                repo = PackageRepo(cache, pkgname, data[1])
+                repo = PackageRepo(cache, pkgname, data[1], os_release['VERSION_ID'])
                 if ls.replace('-', '_') in repo.languages:
                     if f == 'sans-serif':
                         is_default = repo.is_default_sans

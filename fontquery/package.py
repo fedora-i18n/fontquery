@@ -1,6 +1,7 @@
 # Copyright (C) 2024 Red Hat, Inc.
 # SPDX-License-Identifier: MIT
 
+import os
 import re
 import shutil
 import subprocess
@@ -35,6 +36,10 @@ class NoPackageManager(FqException):
 
 class NoPackageRepo(FqException):
     DEFAULT_MESSAGE: str = "no such package repositories"
+
+
+class NoBranchInPackageRepo(FqException):
+    DEFAULT_MESSAGE: str = "no such branches available in package repository"
 
 
 class InvalidFormat(FqException):
@@ -119,18 +124,26 @@ class ParamList(UpperStrEnum):
 
 class PackageRepoCache:
 
-    def __init__(self):
+    def __init__(self, product: str = 'fedora'):
         self._cache = {}
+        if product == 'fedora':
+            self._url = 'https://src.fedoraproject.org/rpms/'
+            self._branch = 'f{}'
+        elif product == 'centos':
+            self._url = 'https://gitlab.com/redhat/centos-stream/rpms/'
+            self._branch = 'c{}s'
+        else:
+            raise RuntimeError(f'unknown product: {product}')
 
     def add(self, pkg: str, dir: tempfile.TemporaryDirectory):
         if pkg in self._cache:
             self._cache[pkg].cleanup()
         self._cache[pkg] = dir
 
-    def get(self, pkg: str) -> tempfile.TemporaryDirectory:
+    def get(self, pkg: str, branch: str = 'rawhide') -> tempfile.TemporaryDirectory:
         if pkg not in self._cache:
             tmpdir = tempfile.TemporaryDirectory()
-            cmdline = ['git', 'clone', f'https://src.fedoraproject.org/rpms/{pkg}.git', tmpdir.name]
+            cmdline = ['git', 'clone', self._url + f'{pkg}.git', tmpdir.name]
             retval = subprocess.run(cmdline,
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE,
@@ -142,12 +155,26 @@ class PackageRepoCache:
                 self.add(pkg, tmpdir)
         else:
             tmpdir = self._cache[pkg]
+        try:
+            cwd = Path.cwd()
+            os.chdir(tmpdir.name)
+            cmdline = ['git', 'switch', branch if branch == 'rawhide' else self._branch.format(branch)]
+            retval = subprocess.run(cmdline,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE,
+                                    check=False)
+        finally:
+            os.chdir(cwd)
+        if retval.returncode != 0:
+            tmpdir.cleanup()
+            raise NoBranchInPackageRepo(branch)
+
         return tmpdir
 
 
 class PackageRepo:
 
-    def __init__(self, cache, pkg, family=None):
+    def __init__(self, cache, pkg, family: str = None, branch: str ='rawhide'):
         self._is_default_sans = 0
         self._is_default_serif = 0
         self._is_default_mono = 0
@@ -155,7 +182,7 @@ class PackageRepo:
         if not shutil.which('git'):
             raise RuntimeError('No git installed')
         srpm = list(Font2Package.get_source_package_name(pkg))[0]
-        tmpdir = cache.get(srpm)
+        tmpdir = cache.get(srpm, branch)
         self._parse_plan(tmpdir.name, pkg, family)
 
     @property
@@ -238,4 +265,6 @@ if __name__ == '__main__':
     print(repo)
     print(repo.is_default_sans)
     repo = PackageRepo(_cache, 'google-noto-sans-cjk-vf-fonts')
+    print(repo.is_default_sans)
+    repo = PackageRepo(_cache, 'google-noto-sans-cjk-vf-fonts', 40)
     print(repo.is_default_sans)
