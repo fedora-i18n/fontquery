@@ -77,10 +77,8 @@ def get_version(os_release) -> str:
         if os_release['VARIANT_ID'] == 'eln' or\
            os_release['REDHAT_SUPPORT_PRODUCT_VERSION'] == 'rawhide':
             return 'rawhide'
-        else:
-            return os_release['VERSION_ID']
-    else:
         return os_release['VERSION_ID']
+    return os_release['VERSION_ID']
 
 
 def dump(params: object) -> str:

@@ -135,10 +135,10 @@ class PackageRepoCache:
         else:
             raise RuntimeError(f'unknown product: {product}')
 
-    def add(self, pkg: str, dir: tempfile.TemporaryDirectory):
+    def add(self, pkg: str, repodir: tempfile.TemporaryDirectory):
         if pkg in self._cache:
             self._cache[pkg].cleanup()
-        self._cache[pkg] = dir
+        self._cache[pkg] = repodir
 
     def get(self, pkg: str, branch: str = 'rawhide') -> tempfile.TemporaryDirectory:
         if pkg not in self._cache:
@@ -151,12 +151,11 @@ class PackageRepoCache:
             if retval.returncode != 0:
                 tmpdir.cleanup()
                 raise NoPackageRepo(pkg)
-            else:
-                self.add(pkg, tmpdir)
+            self.add(pkg, tmpdir)
         else:
             tmpdir = self._cache[pkg]
+        cwd = Path.cwd()
         try:
-            cwd = Path.cwd()
             os.chdir(tmpdir.name)
             cmdline = ['git', 'switch', branch if branch == 'rawhide' else self._branch.format(branch)]
             retval = subprocess.run(cmdline,
@@ -258,13 +257,13 @@ if __name__ == '__main__':
     print(_srpm)
     _cache = PackageRepoCache()
     for _p in _pkg:
-        repo = PackageRepo(_cache, _p)
-        print(repo)
-        print(repo.is_default_sans)
-    repo = PackageRepo(_cache, 'abattis-cantarell-vf-fonts')
-    print(repo)
-    print(repo.is_default_sans)
-    repo = PackageRepo(_cache, 'google-noto-sans-cjk-vf-fonts')
-    print(repo.is_default_sans)
-    repo = PackageRepo(_cache, 'google-noto-sans-cjk-vf-fonts', 40)
-    print(repo.is_default_sans)
+        _repo = PackageRepo(_cache, _p)
+        print(_repo)
+        print(_repo.is_default_sans)
+    _repo = PackageRepo(_cache, 'abattis-cantarell-vf-fonts')
+    print(_repo)
+    print(_repo.is_default_sans)
+    _repo = PackageRepo(_cache, 'google-noto-sans-cjk-vf-fonts')
+    print(_repo.is_default_sans)
+    _repo = PackageRepo(_cache, 'google-noto-sans-cjk-vf-fonts', 40)
+    print(_repo.is_default_sans)
