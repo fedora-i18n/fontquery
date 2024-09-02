@@ -72,6 +72,17 @@ except ModuleNotFoundError:
     ]
 
 
+def get_version(os_release) -> str:
+    if os_release['ID'] == 'fedora':
+        if os_release['VARIANT_ID'] == 'eln' or\
+           os_release['REDHAT_SUPPORT_PRODUCT_VERSION'] == 'rawhide':
+            return 'rawhide'
+        else:
+            return os_release['VERSION_ID']
+    else:
+        return os_release['VERSION_ID']
+
+
 def dump(params: object) -> str:
     """Dump fontquery result in JSON."""
     p = Path('/etc/os-release')
@@ -125,7 +136,7 @@ def dump(params: object) -> str:
             is_default = 2
             try:
                 pkgname = list(Font2Package.get_package_name_from_file(data[0]))[0]
-                repo = PackageRepo(cache, pkgname, data[1], os_release['VERSION_ID'])
+                repo = PackageRepo(cache, pkgname, data[1], get_version(os_release))
                 if ls.replace('-', '_') in repo.languages:
                     if f == 'sans-serif':
                         is_default = repo.is_default_sans
