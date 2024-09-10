@@ -500,12 +500,15 @@ class TextRenderer(DataRenderer):
         yield '\n'.join(out) + '\n'
 
 
-def json2data(data: dict[str, Any], ignore_file: bool) -> dict[str, dict[str, Any]]:
+def json2data(data: dict[str, Any], ignore_file: bool, ignore_flag: bool = False) -> dict[str, dict[str, Any]]:
     """Restructure JSON format."""
     retval = {}
     for d in data['fonts']:
         if ignore_file:
             del d['file']
+        if ignore_flag:
+            if 'is_default' in d:
+                del d['is_default']
         key = d['lang_name']
         if key not in retval:
             retval[key] = {}
@@ -561,8 +564,8 @@ def generate_table(renderer: DataRenderer, title: str, data: dict[str, Any]) -> 
 def generate_diff(renderer: DataRenderer, title: str, data: dict[str, Any],
                   diffdata: dict[str, Any], compare_accurately: bool) -> Iterator[str]:
     """Format difference between two JSONs to HTML."""
-    sorteddata = json2data(data, not compare_accurately)
-    sorteddiffdata = json2data(diffdata, not compare_accurately)
+    sorteddata = json2data(data, not compare_accurately, True)
+    sorteddiffdata = json2data(diffdata, not compare_accurately, True)
     matched = {}
     notmatched = {}
     missing_b = {}
