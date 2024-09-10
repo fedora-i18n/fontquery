@@ -454,7 +454,7 @@ class TextRenderer(DataRenderer):
             vv = diffdata[k][kk]
             for a in aliases:
                 if vv[0][a]['family'] == vv[1][a]['family']:
-                    if vv[0][a]['file'] == vv[1][a]['file']:
+                    if 'file' not in vv[0][a] or vv[0][a]['file'] == vv[1][a]['file']:
                         diffcol.append(ColoredText(''))
                         origcol.append(ColoredText(vv[0][a]['family']))
                     else:
