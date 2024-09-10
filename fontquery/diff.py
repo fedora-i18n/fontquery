@@ -41,6 +41,7 @@ except ModuleNotFoundError:
     LOCAL_NOT_SUPPORTED = True
 from fontquery import htmlformatter  # noqa: F401
 from fontquery.cache import FontQueryCache  # noqa: F401
+from fontquery.container import ContainerImage  # noqa: F401
 
 
 def get_json(release, args):
@@ -88,6 +89,11 @@ def load_json(release, args, fcache):
     if release == 'local':
         out = get_json(release, args)
     else:
+        if not args.disable_update:
+            c = ContainerImage(args.product, release, args.verbose)
+            c.target = args.target
+            if not c.pull(args):
+                raise RuntimeError('`podman pull\' failed')
         fqc = FontQueryCache(args.product, release, args.target)
         if args.clean_cache:
             fqc.delete()
@@ -126,6 +132,9 @@ def main():
                         action='store_true',
                         help='Enforce processing everything '
                         'even if not updating')
+    parser.add_argument('--disable-update',
+                        action='store_true',
+                        help='Do not update the container image')
     parser.add_argument('-l',
                         '--lang',
                         action='append',
