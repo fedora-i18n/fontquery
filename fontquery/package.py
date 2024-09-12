@@ -173,7 +173,7 @@ class PackageRepoCache:
 
 class PackageRepo:
 
-    def __init__(self, cache, pkg, family: str = None, branch: str ='rawhide'):
+    def __init__(self, cache, pkg, family: str = None, branch: str = 'rawhide'):
         self._is_default_sans = 0
         self._is_default_serif = 0
         self._is_default_mono = 0
