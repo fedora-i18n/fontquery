@@ -165,7 +165,7 @@ case "$ID" in
                 echo -n "** Checking systemd-standalone-sysusers: "
                 rpm -q systemd-standalone-sysusers > /dev/null || ret=$?
                 echo $ret
-                if [ $ret -eq 1 ]; then
+                if [ $ret -eq 0 ]; then
                     echo "** Installing systemd to satisfy dependencies"; $DNF -y swap systemd-standalone-sysusers systemd
                 fi
                 echo "** Installing anaconda-core"; $DNF -y $DNFOPT install anaconda-core
@@ -216,7 +216,7 @@ case "$ID" in
                 echo -n "** Checking systemd-standalone-sysusers: "
                 rpm -q systemd-standalone-sysusers > /dev/null || ret=$?
                 echo $ret
-                if [ $ret -eq 1 ]; then
+                if [ $ret -eq 0 ]; then
                     echo "** Installing systemd to satisfy dependencies"; $DNF -y swap systemd-standalone-sysusers systemd
                 fi
                 echo "** Installing anaconda-core"; $DNF -y install anaconda-core
