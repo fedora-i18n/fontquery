@@ -162,7 +162,9 @@ case "$ID" in
                 echo "** Installing fontconfig"; $DNF -y $DNFOPT install fontconfig
                 echo "** Installing git"; $DNF -y install git
                 ret=0
+                echo -n "** Checking systemd-standalone-sysusers: "
                 rpm -q systemd-standalone-sysusers > /dev/null || ret=$?
+                echo $ret
                 if [ $ret -eq 1 ]; then
                     echo "** Installing systemd to satisfy dependencies"; $DNF -y swap systemd-standalone-sysusers systemd
                 fi
@@ -211,7 +213,9 @@ case "$ID" in
                 echo "** Installing fontconfig"; $DNF -y install fontconfig
                 echo "** Installing git"; $DNF -y install git
                 ret=0
+                echo -n "** Checking systemd-standalone-sysusers: "
                 rpm -q systemd-standalone-sysusers > /dev/null || ret=$?
+                echo $ret
                 if [ $ret -eq 1 ]; then
                     echo "** Installing systemd to satisfy dependencies"; $DNF -y swap systemd-standalone-sysusers systemd
                 fi
