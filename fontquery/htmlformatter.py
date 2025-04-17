@@ -30,8 +30,12 @@ import json
 import os
 import re
 import sys
-from typing import Any, Iterator
-import markdown
+from typing import Any, Dict, Iterator
+NO_MARKDOWN = False
+try:
+    import markdown
+except ModuleNotFoundError:
+    NO_MARKDOWN = True
 try:
     from termcolor import colored
 except ModuleNotFoundError:
@@ -621,14 +625,21 @@ def run(mode, in1, in2, out, renderer, title):
     return ret
 
 
+def get_renderer() -> Dict[str, DataRenderer]:
+    renderer = {'html': HtmlRenderer,
+                'text': TextRenderer}
+    if NO_MARKDOWN:
+        del renderer['html']
+    return renderer
+
+
 def main():
     """Endpoint to execute fq2html program."""
     fmc = argparse.ArgumentDefaultsHelpFormatter
     parser = argparse.ArgumentParser(description=('HTML formatter '
                                                   'for fontquery'),
                                      formatter_class=fmc)
-    renderer = {'html': HtmlRenderer,
-                'text': TextRenderer}
+    renderer = get_renderer()
 
     parser.add_argument('-o', '--output',
                         type=argparse.FileType('w'),
