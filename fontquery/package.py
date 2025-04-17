@@ -54,16 +54,12 @@ class Font2Package:
             pkg = [pkg]
         for p in pkg:
             cmdline = ['rpm', '-q', '--qf', '%{version}-%{release}', p]
-            retver = subprocess.run(cmdline,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE,
+            retver = subprocess.run(cmdline, capture_output=True,
                                     check=False)
             if retver.returncode != 0:
                 raise PackageNotFound(p)
             cmdline = ['rpm', '-q', '--qf', '%{sourcerpm}', p]
-            retsrpm = subprocess.run(cmdline,
-                                     stdout=subprocess.PIPE,
-                                     stderr=subprocess.PIPE,
+            retsrpm = subprocess.run(cmdline, capture_output=True,
                                      check=False)
             if retsrpm.returncode != 0:
                 raise PackageNotFound(p)
@@ -74,9 +70,7 @@ class Font2Package:
     def get_package_name_from_file(cls, fontfile) -> Iterator[str]:
         if shutil.which('rpm'):
             cmdline = ['rpm', '-qf', '--qf', '%{name}', fontfile]
-            retval = subprocess.run(cmdline,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE,
+            retval = subprocess.run(cmdline, capture_output=True,
                                     check=False)
             if retval.returncode != 0:
                 raise PackageNotFound(fontfile)
@@ -144,9 +138,7 @@ class PackageRepoCache:
         if pkg not in self._cache:
             tmpdir = tempfile.TemporaryDirectory()
             cmdline = ['git', 'clone', self._url + f'{pkg}.git', tmpdir.name]
-            retval = subprocess.run(cmdline,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE,
+            retval = subprocess.run(cmdline, capture_output=True,
                                     check=False)
             if retval.returncode != 0:
                 tmpdir.cleanup()
@@ -159,8 +151,7 @@ class PackageRepoCache:
             os.chdir(tmpdir.name)
             cmdline = ['git', 'switch', branch if branch == 'rawhide' else self._branch.format(branch)]
             retval = subprocess.run(cmdline,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE,
+                                    capture_output=True,
                                     check=False)
         finally:
             os.chdir(cwd)

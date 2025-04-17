@@ -31,7 +31,7 @@ class FontQueryCache:
         cmdline = [
             'podman', 'images', '-a', '--no-trunc', self._repo
         ]
-        res = subprocess.run(cmdline, stdout=subprocess.PIPE, check=False)
+        res = subprocess.run(cmdline, capture_output=True, check=False)
         if res.returncode != 0:
             sys.tracebacklimit = 0
             raise RuntimeError('`podman images\' failed with'
