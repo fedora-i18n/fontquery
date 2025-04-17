@@ -120,9 +120,7 @@ def dump(params: object) -> str:
             ]
             if params.verbose:
                 print('# ' + ' '.join(cmdline), flush=True, file=sys.stderr)
-            retval = subprocess.run(cmdline,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE,
+            retval = subprocess.run(cmdline, capture_output=True,
                                     check=False)
 
             cond_empty = re.compile(r'^$')
@@ -182,9 +180,7 @@ def fcmatchaliases(params: object) -> str:
             ]
             if params.verbose:
                 print('# ' + ' '.join(cmdline), flush=True, file=sys.stderr)
-            retval = subprocess.run(cmdline,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE,
+            retval = subprocess.run(cmdline, capture_output=True,
                                     check=False)
 
             cond_empty = re.compile(r'^$')
@@ -198,7 +194,7 @@ def fcmatchaliases(params: object) -> str:
     return "\n".join(results)
 
 
-def checkupdate(params: object) -> str:
+def checkupdate(params: object) -> None:
     if not shutil.which('fontquery-setup.sh'):
         print('fontquery-setup.sh is not installed')
         sys.exit(1)
@@ -211,13 +207,26 @@ def checkupdate(params: object) -> str:
     sys.exit(res.returncode)
 
 
-def update(params: object) -> str:
+def update(params: object) -> None:
     if not shutil.which('fontquery-setup.sh'):
         print('fontquery-setup.sh is not installed')
         sys.exit(1)
     cmdline = [
         'fontquery-setup.sh', '-u'
     ]
+    if params.verbose:
+        print('# ' + ' '.join(cmdline), flush=True, file=sys.stderr)
+    res = subprocess.run(cmdline, check=False)
+    sys.exit(res.returncode)
+
+
+def install(params: object) -> None:
+    if not shutil.which('fontquery-setup.sh'):
+        print('fontquery-setup.sh is not installed')
+        sys.exit(1)
+    cmdline = [
+        'fontquery-setup.sh', '-i'
+    ] + params.args
     if params.verbose:
         print('# ' + ' '.join(cmdline), flush=True, file=sys.stderr)
     res = subprocess.run(cmdline, check=False)
@@ -232,6 +241,7 @@ def main():
              'json': dump,
              'update': update,
              'checkupdate': checkupdate,
+             'install': install,
              }
     fclang_ll_cc = [
         'az_az', 'az_ir', 'ber_dz', 'ber_ma', 'ku_am', 'ku_iq', 'ku_ir',

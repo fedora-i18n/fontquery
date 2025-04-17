@@ -21,6 +21,7 @@ Options:
 -h         Display this help and exit
 -t=TARGET  Set a TARGET build (base, minimal, extra, all)
 -c         Check for updates
+-i         Install a package
 -u         Update
 -v         Turn on debug
 _E_
@@ -31,6 +32,7 @@ DEBUG="${DEBUG:-}"
 OPT_TARGET="${OPT_TARGET:-minimal}"
 OPT_UPDATE=0
 OPT_CHECKUPDATE=0
+OPT_INSTALL=0
 DIST="${DIST:-}"
 
 detect_pip() {
@@ -66,7 +68,7 @@ update_fontquery() {
     rm /tmp/fontquery* || :
 }
 
-while getopts cht:uv OPT; do
+while getopts chit:uv OPT; do
     case "$OPT" in
         h)
             msg_usage
@@ -83,6 +85,9 @@ while getopts cht:uv OPT; do
         c)
             OPT_CHECKUPDATE=1
             ;;
+        i)
+            OPT_INSTALL=1
+            ;;
         u)
             OPT_UPDATE=1
             ;;
@@ -92,6 +97,12 @@ while getopts cht:uv OPT; do
       ;;
   esac
 done
+
+shift `expr "${OPTIND}" - 1`
+
+if ! test -d /var/tmp/fontquery; then
+    mkdir /var/tmp/fontquery
+fi
 
 if test "$OPT_CHECKUPDATE" -eq 1; then
     EXIT_STATUS=0
@@ -139,6 +150,27 @@ if test "$OPT_UPDATE" -eq 1; then
             $DNF -y update --setopt=protected_packages=,
             EXIT_STATUS=$?
             update_fontquery
+            ;;
+        *)
+            echo "Error: Unsupported distribution: $ID" >&2
+            exit 1
+            ;;
+    esac
+    exit $EXIT_STATUS
+fi
+
+if test "$OPT_INSTALL" -eq 1; then
+    EXIT_STATUS=0
+    case "$ID" in
+        fedora|centos)
+            echo "** Installing package(s)"
+            args=()
+            for i in "$@"
+            do
+                args+=("/var/tmp/fontquery/$i")
+            done
+            echo $DNF -y install "${args[@]}"
+            $DNF -y install "${args[@]}"
             ;;
         *)
             echo "Error: Unsupported distribution: $ID" >&2
