@@ -41,6 +41,7 @@ dependencies = [
 "fontquery-build" = "fontquery.build:main"
 "fq2html" = "fontquery.htmlformatter:main"
 "fontquery-diff" = "fontquery.diff:main"
+"fontquery-pkgdiff" = "fontquery.pkgdiff:main"
 
 [tool.setuptools]
 include-package-data = false
