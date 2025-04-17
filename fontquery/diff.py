@@ -118,8 +118,7 @@ def load_json(release, args, fcache):
 
 def main():
     """Endpoint to execute fontquery diff program."""
-    renderer = {'html': htmlformatter.HtmlRenderer,
-                'text': htmlformatter.TextRenderer}
+    renderer = htmlformatter.get_renderer()
 
     parser = argparse.ArgumentParser(
         description='Show difference between releases',
