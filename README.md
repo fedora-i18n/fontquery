@@ -101,6 +101,12 @@ To check difference between local and reference:
 $ fontquery-diff -R text rawhide local
 ```
 
+To check difference with certain packages:
+
+``` shell
+$ fontquery-pkgdiff /path/to/package ...
+```
+
 ## For developers
 
 Before committing something into git repository, you may want to do:
