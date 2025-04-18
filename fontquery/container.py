@@ -348,10 +348,11 @@ class ContainerImage:
             if not self._copy(cname, package):
                 return None
             print('* Installing packages...', file=sys.stderr)
+            pkgs = ' '.join([Path(f).name for f in package])
             res = self._exec(session=cname,
                              stderr=subprocess.PIPE,
                              cmd='/usr/local/bin/fontquery-client '
-                             f'-m install {' '.join([Path(f).name for f in package])}')
+                             f'-m install {pkgs}')
             if res.returncode != 0:
                 print('** Unable to install package', file=sys.stderr)
                 return None
