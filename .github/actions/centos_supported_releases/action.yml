@@ -26,6 +26,6 @@ runs:
         (echo -n "supported_releases=[";
         for i in ${{ steps.tags.outputs.tags }}; do
           n=$(echo -n $i|sed -E 's/^stream([0-9]+)(\-.*)?$/\1/'); echo "$n \"$i\" $n"
-        done|sort -n|uniq -f2|cut -f2 -d' '|tr "\n" ","
+        done|sort -n|uniq -f2|cut -f2 -d' '|grep -v stream8|tr "\n" ","
         echo "]") | sed -e 's/,]/]/' >> $GITHUB_OUTPUT
       shell: bash
