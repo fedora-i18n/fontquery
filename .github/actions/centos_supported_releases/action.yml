@@ -10,14 +10,22 @@ runs:
   using: "composite"
   steps:
     - name: Install dependencies
-      run: sudo apt install curl
+      run: sudo apt install podman gawk grep
       shell: bash
-    - name: Get supported releases for CentOS
+    - name: Get all tags for CentOS stream from the container registry
+      id: tags
+      run: |
+        (echo -n "tags=";
+        for i in $(podman search --list-tags --limit 1000 quay.io/centos/centos|awk '{print $2}'|grep -E 'stream[0-9]+'|grep -v minimal|sort|uniq|tr "\n" " "); do
+          echo -n "\"$i\" "
+        done) >> $GITHUB_OUTPUT
+      shell: bash
+    - name: Drop duplicate releases
       id: centos
       run: |
-        (echo -n "supported_releases=["
-        for i in 9 10-development; do
-          echo -n "\"$i\","
-        done
+        (echo -n "supported_releases=[";
+        for i in ${{ steps.tags.outputs.tags }}; do
+          n=$(echo -n $i|sed -E 's/^stream([0-9]+)(\-.*)?$/\1/'); echo "$n \"$i\" $n"
+        done|sort -n|uniq -f2|cut -f2 -d' '|tr "\n" ","
         echo "]") | sed -e 's/,]/]/' >> $GITHUB_OUTPUT
       shell: bash
