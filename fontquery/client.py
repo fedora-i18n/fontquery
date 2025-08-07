@@ -133,13 +133,14 @@ def dump(params: object) -> str:
             try:
                 pkgname = list(Font2Package.get_package_name_from_file(data[0]))[0]
                 repo = PackageRepo(cache, pkgname, data[1], get_version(os_release))
-                if ls.replace('-', '_') in repo.languages:
+                ll = ls.replace('-', '_')
+                if ll in repo.languages:
                     if f == 'sans-serif':
-                        is_default = repo.is_default_sans
+                        is_default = repo.is_default_sans(data[1], ll)
                     elif f == 'serif':
-                        is_default = repo.is_default_serif
+                        is_default = repo.is_default_serif(data[1], ll)
                     elif f == 'monospace':
-                        is_default = repo.is_default_mono
+                        is_default = repo.is_default_mono(data[1], ll)
                     else:
                         is_default = 2
                 else:

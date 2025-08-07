@@ -165,27 +165,22 @@ class PackageRepoCache:
 class PackageRepo:
 
     def __init__(self, cache, pkg, family: str = None, branch: str = 'rawhide'):
-        self._is_default_sans = 0
-        self._is_default_serif = 0
-        self._is_default_mono = 0
-        self._lang_coverage = ['en']
+        self._is_default = {}
+        self._lang_coverage = []
         if not shutil.which('git'):
             raise RuntimeError('No git installed')
         srpm = list(Font2Package.get_source_package_name(pkg))[0]
         tmpdir = cache.get(srpm, branch)
         self._parse_plan(tmpdir.name, pkg, family)
 
-    @property
-    def is_default_sans(self):
-        return self._is_default_sans
+    def is_default_sans(self, family, lang):
+        return family in self._is_default and self._is_default[family]['sans'].get(lang, 0)
 
-    @property
-    def is_default_serif(self):
-        return self._is_default_serif
+    def is_default_serif(self, family, lang):
+        return family in self._is_default and self._is_default[family]['serif'].get(lang, 0)
 
-    @property
-    def is_default_mono(self):
-        return self._is_default_mono
+    def is_default_mono(self, family, lang):
+        return family in self._is_default and self._is_default[family]['mono'].get(lang, 0)
 
     @property
     def languages(self):
@@ -206,11 +201,9 @@ class PackageRepo:
                                 if re.match('#', row):
                                     continue
                                 data = row.strip().split(';')
-                                if self._parse_params(data, VarList, pkg, family):
-                                    return
+                                self._parse_params(data, VarList, pkg, family)
                     else:
-                        if self._parse_params(env, ParamList, pkg, family):
-                            return
+                        self._parse_params(env, ParamList, pkg, family)
 
     def _parse_params(self, data: list, enum, pkg: str, family: str) -> bool:
         if data[enum.PACKAGE] != pkg:
@@ -224,18 +217,32 @@ class PackageRepo:
             except (IndexError, KeyError):
                 return default
 
-        self._lang_coverage = [ls.replace('-', '_') for ls in set_default(data,
-                                                                          enum.FONT_LANG,
-                                                                          'en').split(',')]
-        self._is_default_sans = int(set_default(data,
-                                                enum.DEFAULT_SANS,
-                                                0))
-        self._is_default_serif = int(set_default(data,
-                                                 enum.DEFAULT_SERIF,
-                                                 0))
-        self._is_default_mono = int(set_default(data,
-                                                enum.DEFAULT_MONO,
-                                                0))
+        ls = [ls.replace('-', '_') for ls in set_default(data,
+                                                         enum.FONT_LANG,
+                                                         'en').split(',')]
+        set1 = set(self._lang_coverage)
+        set2 = set(ls)
+        newls = sorted(list(set2 - set1))
+        self._lang_coverage += newls
+
+        for l in ls:
+            if data[enum.FONT_FAMILY] not in self._is_default:
+                self._is_default[data[enum.FONT_FAMILY]] = {
+                    'sans': {}, 'serif': {}, 'mono': {}, 'emoji': {}, 'math': {}
+                }
+            is_default = self._is_default[data[enum.FONT_FAMILY]]
+            if enum == VarList or enum.DEFAULT_SANS in data:
+                is_default['sans'][l] = int(set_default(data,
+                                                        enum.DEFAULT_SANS,
+                                                        0))
+            if enum == VarList or enum.DEFAULT_SERIF in data:
+                is_default['serif'][l] = int(set_default(data,
+                                                         enum.DEFAULT_SERIF,
+                                                         0))
+            if enum == VarList or enum.DEFAULT_MONO in data:
+                is_default['mono'][l] = int(set_default(data,
+                                                        enum.DEFAULT_MONO,
+                                                        0))
         return True
 
 
@@ -250,11 +257,23 @@ if __name__ == '__main__':
     for _p in _pkg:
         _repo = PackageRepo(_cache, _p)
         print(_repo)
-        print(_repo.is_default_sans)
+        print(_repo.languages)
+        print(_repo._is_default)
+    _repo = PackageRepo(_cache, 'google-noto-sans-fonts')
+    print(_repo)
+    print(_repo._is_default)
     _repo = PackageRepo(_cache, 'abattis-cantarell-vf-fonts')
     print(_repo)
-    print(_repo.is_default_sans)
+    print(_repo._is_default)
     _repo = PackageRepo(_cache, 'google-noto-sans-cjk-vf-fonts')
-    print(_repo.is_default_sans)
+    print(_repo._is_default)
     _repo = PackageRepo(_cache, 'google-noto-sans-cjk-vf-fonts', 40)
-    print(_repo.is_default_sans)
+    print(_repo._is_default)
+    _pkg = list(Font2Package.get_package_name_from_file('/usr/share/fonts/vazirmatn-fonts/'
+                                                        'Vazirmatn-Regular.ttf'))
+    print(_pkg)
+    print(_pkg[0])
+    for _p in _pkg:
+        _repo = PackageRepo(_cache, _p)
+        print(_repo)
+        print(_repo._is_default)
