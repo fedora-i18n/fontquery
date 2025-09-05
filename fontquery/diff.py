@@ -57,8 +57,7 @@ def get_json(release, args):
         cmdline = ['python', fqcexec, '-m', 'json'] + (
             ['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
             else []) + ([] if args.lang is None else
-                        [' '.join(['-l=' + ls
-                                   for ls in args.lang])])
+                        ['-l=' + ls for ls in args.lang])
     else:
         cmdline = [
             'podman', 'run', '--rm',
@@ -180,6 +179,7 @@ def main():
         print('podman is not installed', file=sys.stderr)
         sys.exit(1)
 
+    args.lang = sum([s.split(',') for s in args.lang],[])
     if args.verbose:
         print(f'* Target: {args.target}', file=sys.stderr)
         print(f'* Language: {args.lang}', file=sys.stderr)
