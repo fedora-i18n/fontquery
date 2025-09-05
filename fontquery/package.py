@@ -269,8 +269,8 @@ if __name__ == '__main__':
     print(_repo._is_default)
     _repo = PackageRepo(_cache, 'google-noto-sans-cjk-vf-fonts', 40)
     print(_repo._is_default)
-    _pkg = list(Font2Package.get_package_name_from_file('/usr/share/fonts/vazirmatn-fonts/'
-                                                        'Vazirmatn-Regular.ttf'))
+    _pkg = list(Font2Package.get_package_name_from_file('/usr/share/fonts/vazirmatn-vf-fonts/'
+                                                        'Vazirmatn[wght].ttf'))
     print(_pkg)
     print(_pkg[0])
     for _p in _pkg:
