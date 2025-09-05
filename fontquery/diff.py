@@ -67,8 +67,7 @@ def get_json(release, args):
             '-m', 'json'
         ] + (['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
              else []) + ([] if args.lang is None else
-                         [' '.join(['-l=' + ls
-                                    for ls in args.lang])])
+                         ['-l=' + ls for ls in args.lang])
 
     if args.verbose:
         print('# ' + ' '.join(cmdline), file=sys.stderr)
