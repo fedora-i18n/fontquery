@@ -179,7 +179,8 @@ def main():
         print('podman is not installed', file=sys.stderr)
         sys.exit(1)
 
-    args.lang = sum([s.split(',') for s in args.lang],[])
+    if args.lang:
+        args.lang = sum([s.split(',') for s in args.lang],[])
     if args.verbose:
         print(f'* Target: {args.target}', file=sys.stderr)
         print(f'* Language: {args.lang}', file=sys.stderr)
