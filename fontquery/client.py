@@ -74,7 +74,7 @@ except ModuleNotFoundError:
 
 def get_version(os_release) -> str:
     if os_release['ID'] == 'fedora':
-        if os_release['VARIANT_ID'] == 'eln' or\
+        if ('VARIANT_ID' in os_release and os_release['VARIANT_ID'] == 'eln') or\
            os_release['REDHAT_SUPPORT_PRODUCT_VERSION'] == 'rawhide':
             return 'rawhide'
         return os_release['VERSION_ID']
