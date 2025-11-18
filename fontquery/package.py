@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Red Hat, Inc.
+# Copyright (C) 2024-2025 Red Hat, Inc.
 # SPDX-License-Identifier: MIT
 
 import os
@@ -92,6 +92,24 @@ class VarList(IntEnum):
     DEFAULT_MATH = 9
     FONT_LANG_EXCLUDE_FILES = 10
     FONT_VALIDATE_EXCLUDE_FILES = 11
+    # unsupported fields
+    DEFAULT_SYSTEMUI = 12
+
+
+class VarListV2(IntEnum):
+    PACKAGE = 0
+    FONT_ALIAS = 1
+    FONT_LANG = 2
+    FONT_WIDTH = 3
+    FONT_FAMILY = 4
+    DEFAULT_SANS = 5
+    DEFAULT_SERIF = 6
+    DEFAULT_MONO = 7
+    DEFAULT_EMOJI = 8
+    DEFAULT_MATH = 9
+    DEFAULT_SYSTEMUI = 10
+    FONT_LANG_EXCLUDE_FILES = 11
+    FONT_VALIDATE_EXCLUDE_FILES = 12
 
 
 class UpperStrEnum(StrEnum):
@@ -112,8 +130,16 @@ class ParamList(UpperStrEnum):
     DEFAULT_MONO = auto()
     DEFAULT_EMOJI = auto()
     DEFAULT_MATH = auto()
+    DEFAULT_SYSTEMUI = auto()
     FONT_LANG_EXCLUDE_FILES = auto()
     FONT_VALIDATE_EXCLUDE_FILES = auto()
+
+
+def get_var(version):
+    aVarList = [VarList, VarListV2]
+    if version <= 0 or version > len(aVarList):
+        return VarList
+    return aVarList[version-1]
 
 
 class PackageRepoCache:
@@ -142,7 +168,7 @@ class PackageRepoCache:
                                     check=False)
             if retval.returncode != 0:
                 tmpdir.cleanup()
-                raise NoPackageRepo(pkg)
+                raise NoPackageRepo(f'{pkg}: {retval.stderr.decode('utf-8')}')
             self.add(pkg, tmpdir)
         else:
             tmpdir = self._cache[pkg]
@@ -182,6 +208,9 @@ class PackageRepo:
     def is_default_mono(self, family, lang):
         return family in self._is_default and self._is_default[family]['mono'].get(lang, 0)
 
+    def is_default_systemui(self, family, lang):
+        return family in self._is_default and self._is_default[family]['systemui'].get(lang, 0)
+
     @property
     def languages(self):
         return self._lang_coverage
@@ -197,11 +226,18 @@ class PackageRepo:
                     env = fmf['environment']
                     if 'VARLIST' in env:
                         with open(p / env['VARLIST'], encoding='utf-8') as v:
+                            version = 1
                             for row in v.readlines():
+                                m = re.match(r'#\s+version=(\d+)', row)
+                                if m:
+                                    if version != 1:
+                                        raise RuntimeError("version identifier can't be set twice")
+                                    version = int(m.group())
                                 if re.match('#', row):
                                     continue
                                 data = row.strip().split(';')
-                                self._parse_params(data, VarList, pkg, family)
+                                var = get_var(version)
+                                self._parse_params(data, var, pkg, family)
                     else:
                         self._parse_params(env, ParamList, pkg, family)
 
@@ -211,10 +247,13 @@ class PackageRepo:
         if family is not None and data[enum.FONT_FAMILY] != family:
             return False
 
-        def set_default(v, idx, default):
+        def set_default(v, idx, default, func=None):
             try:
-                return v[idx]
-            except (IndexError, KeyError):
+                if func:
+                    return func(v[idx])
+                else:
+                    return v[idx]
+            except (IndexError, KeyError, ValueError):
                 return default
 
         ls = [ls.replace('-', '_') for ls in set_default(data,
@@ -228,21 +267,25 @@ class PackageRepo:
         for l in ls:
             if data[enum.FONT_FAMILY] not in self._is_default:
                 self._is_default[data[enum.FONT_FAMILY]] = {
-                    'sans': {}, 'serif': {}, 'mono': {}, 'emoji': {}, 'math': {}
+                    'sans': {}, 'serif': {}, 'mono': {}, 'emoji': {}, 'math': {}, 'systemui': {}
                 }
             is_default = self._is_default[data[enum.FONT_FAMILY]]
-            if enum == VarList or enum.DEFAULT_SANS in data:
-                is_default['sans'][l] = int(set_default(data,
-                                                        enum.DEFAULT_SANS,
-                                                        0))
-            if enum == VarList or enum.DEFAULT_SERIF in data:
-                is_default['serif'][l] = int(set_default(data,
-                                                         enum.DEFAULT_SERIF,
-                                                         0))
-            if enum == VarList or enum.DEFAULT_MONO in data:
-                is_default['mono'][l] = int(set_default(data,
-                                                        enum.DEFAULT_MONO,
-                                                        0))
+            if isinstance(enum, IntEnum) or enum.DEFAULT_SANS in data:
+                is_default['sans'][l] = set_default(data,
+                                                    enum.DEFAULT_SANS,
+                                                    0, int)
+            if isinstance(enum, IntEnum) or enum.DEFAULT_SERIF in data:
+                is_default['serif'][l] = set_default(data,
+                                                     enum.DEFAULT_SERIF,
+                                                     0, int)
+            if isinstance(enum, IntEnum) or enum.DEFAULT_MONO in data:
+                is_default['mono'][l] = set_default(data,
+                                                    enum.DEFAULT_MONO,
+                                                    0, int)
+            if isinstance(enum, IntEnum) or enum.DEFAULT_SYSTEMUI in data:
+                is_default['systemui'][l] = set_default(data,
+                                                        enum.DEFAULT_SYSTEMUI,
+                                                        0, int)
         return True
 
 
@@ -259,7 +302,7 @@ if __name__ == '__main__':
         print(_repo)
         print(_repo.languages)
         print(_repo._is_default)
-    _repo = PackageRepo(_cache, 'google-noto-sans-fonts')
+    _repo = PackageRepo(_cache, 'google-noto-sans-vf-fonts')
     print(_repo)
     print(_repo._is_default)
     _repo = PackageRepo(_cache, 'abattis-cantarell-vf-fonts')
