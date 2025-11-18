@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Red Hat, Inc.
+# Copyright (C) 2024-2025 Red Hat, Inc.
 # SPDX-License-Identifier: MIT
 
 """Module to deal with cache file"""
@@ -77,4 +77,7 @@ class FontQueryCache:
         return True
 
     def delete(self):
-        self.filename.unlink(missing_ok=False)
+        try:
+            self.filename.unlink(missing_ok=False)
+        except FileNotFoundError:
+            pass
