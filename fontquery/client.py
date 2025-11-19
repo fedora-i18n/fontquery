@@ -1,5 +1,5 @@
 # client.py
-# Copyright (C) 2022-2024 Red Hat, Inc.
+# Copyright (C) 2022-2025 Red Hat, Inc.
 #
 # Authors:
 #   Akira TAGOH  <tagoh@redhat.com>
@@ -116,7 +116,7 @@ def dump(params: object) -> str:
                 ('%{file:-<unknown filename>},'
                  '%{family[0]:-<unknown family>},'
                  '%{style[0]:-<unknown style>}\\n'),
-                f'{f}:lang={ls.replace("_", "-")}'
+                f':family={f}:lang={ls.replace("_", "-")}'
             ]
             if params.verbose:
                 print('# ' + ' '.join(cmdline), flush=True, file=sys.stderr)
@@ -141,6 +141,8 @@ def dump(params: object) -> str:
                         is_default = repo.is_default_serif(data[1], ll)
                     elif f == 'monospace':
                         is_default = repo.is_default_mono(data[1], ll)
+                    elif f == 'system-ui':
+                        is_default = repo.is_default_systemui(data[1], ll)
                     else:
                         is_default = 2
                 else:
@@ -250,7 +252,7 @@ def main():
         'ps_pk', 'ti_er', 'ti_et', 'und_zmth', 'und_zsye', 'zh_cn', 'zh_hk',
         'zh_mo', 'zh_sg', 'zh_tw'
     ]
-    families = ['sans-serif', 'serif', 'monospace']
+    families = ['sans-serif', 'serif', 'monospace', 'system-ui']
     fclangs = []
     for lang in defaultLangList:
         added = False

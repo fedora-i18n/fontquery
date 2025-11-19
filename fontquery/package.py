@@ -227,12 +227,11 @@ class PackageRepo:
                     if 'VARLIST' in env:
                         with open(p / env['VARLIST'], encoding='utf-8') as v:
                             version = 1
-                            for row in v.readlines():
-                                m = re.match(r'#\s+version=(\d+)', row)
-                                if m:
-                                    if version != 1:
-                                        raise RuntimeError("version identifier can't be set twice")
-                                    version = int(m.group())
+                            lines = v.readlines()
+                            m = list(filter(None, list(re.match(r'^#\s+version=(\d+)', s) for s in lines)))
+                            if len(m) > 0 and m[0]:
+                                version = int(m[0].group(1))
+                            for row in lines:
                                 if re.match('#', row):
                                     continue
                                 data = row.strip().split(';')
@@ -256,9 +255,9 @@ class PackageRepo:
             except (IndexError, KeyError, ValueError):
                 return default
 
-        ls = [ls.replace('-', '_') for ls in set_default(data,
-                                                         enum.FONT_LANG,
-                                                         'en').split(',')]
+        ls = [re.sub(r'^-$', 'en', ls).replace('-', '_') for ls in set_default(data,
+                                                                               enum.FONT_LANG,
+                                                                               'en').split(',')]
         set1 = set(self._lang_coverage)
         set2 = set(ls)
         newls = sorted(list(set2 - set1))
@@ -270,19 +269,19 @@ class PackageRepo:
                     'sans': {}, 'serif': {}, 'mono': {}, 'emoji': {}, 'math': {}, 'systemui': {}
                 }
             is_default = self._is_default[data[enum.FONT_FAMILY]]
-            if isinstance(enum, IntEnum) or enum.DEFAULT_SANS in data:
+            if issubclass(enum, IntEnum) or enum.DEFAULT_SANS in data:
                 is_default['sans'][l] = set_default(data,
                                                     enum.DEFAULT_SANS,
                                                     0, int)
-            if isinstance(enum, IntEnum) or enum.DEFAULT_SERIF in data:
+            if issubclass(enum, IntEnum) or enum.DEFAULT_SERIF in data:
                 is_default['serif'][l] = set_default(data,
                                                      enum.DEFAULT_SERIF,
                                                      0, int)
-            if isinstance(enum, IntEnum) or enum.DEFAULT_MONO in data:
+            if issubclass(enum, IntEnum) or enum.DEFAULT_MONO in data:
                 is_default['mono'][l] = set_default(data,
                                                     enum.DEFAULT_MONO,
                                                     0, int)
-            if isinstance(enum, IntEnum) or enum.DEFAULT_SYSTEMUI in data:
+            if issubclass(enum, IntEnum) or enum.DEFAULT_SYSTEMUI in data:
                 is_default['systemui'][l] = set_default(data,
                                                         enum.DEFAULT_SYSTEMUI,
                                                         0, int)
@@ -320,3 +319,50 @@ if __name__ == '__main__':
         _repo = PackageRepo(_cache, _p)
         print(_repo)
         print(_repo._is_default)
+
+    class TestRepoCache(PackageRepoCache):
+
+        def __init__(self, version):
+            self.version = version
+            super().__init__()
+
+        def get(self, pkg: str, branch: str = 'rawhide') -> tempfile.TemporaryDirectory:
+            tmpdir = tempfile.TemporaryDirectory()
+            plandir = Path(tmpdir.name) / 'plans'
+            plandir.mkdir()
+            with (plandir / 'test.fmf').open(mode='w') as f:
+                f.writelines(['summary: test\n',
+                              'discover:\n',
+                              '    how: fmf\n',
+                              '    url: https://src.fedoraproject.org/tests/fonts\n',
+                              '    dist-git-merge: true\n',
+                              'prepare:\n',
+                              '    name: tmt\n',
+                              '    how: install\n',
+                              '    package:\n',
+                              '        - test\n',
+                              'execute:\n',
+                              '    how: tmt\n',
+                              'environment:\n',
+                              '    VARLIST: test.list\n'])
+            with (plandir / 'test.list').open(mode='w') as f:
+                f.write(f'# version={self.version}\n')
+                match self.version:
+                    case 2:
+                        f.writelines([f'{pkg};sans-serif;-;normal;Test Sans;1;0;0;0;0;0;;;;\n',
+                                      f'{pkg};serif;-;normal;Test Serif;0;1;0;0;0;0;;;;\n',
+                                      f'{pkg};monospace;-;normal;Test Mono;0;0;1;0;0;0;;;;\n',
+                                      f'{pkg};system-ui;-;normal;Test UI;0;0;0;0;0;1;;;;\n'])
+                    case _:
+                        f.writelines([f'{pkg};sans-serif;-;normal;Test Sans;1;0;0;0;0;;;;\n',
+                                      f'{pkg};serif;-;normal;Test Serif;0;1;0;0;0;;;;\n',
+                                      f'{pkg};monospace;-;normal;Test Mono;0;0;1;0;0;;;;\n',
+                                      f'{pkg};system-ui;-;normal;Test UI;0;0;0;0;0;;;;\n'])
+            self.add(pkg, tmpdir)
+
+            return tmpdir
+
+    _testcache = TestRepoCache(2)
+    _repo = PackageRepo(_testcache, 'abattis-cantarell-fonts') # dummy package to pass srpm check
+    print(_repo)
+    print(_repo._is_default)
