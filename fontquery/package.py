@@ -168,7 +168,7 @@ class PackageRepoCache:
                                     check=False)
             if retval.returncode != 0:
                 tmpdir.cleanup()
-                raise NoPackageRepo(f'{pkg}: {retval.stderr.decode('utf-8')}')
+                raise NoPackageRepo(f'{pkg}: {retval.stderr.decode("utf-8")}')
             self.add(pkg, tmpdir)
         else:
             tmpdir = self._cache[pkg]
