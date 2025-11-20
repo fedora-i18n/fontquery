@@ -165,7 +165,7 @@ class HtmlRenderer(DataRenderer):
 
         for k in sorted(data.keys()):
             templ = '\n'.join(nodiff_templ)
-            lang = ','.join([f'{ls}({get_lang_for_alias(data[k][ls], 'sans-serif')})'
+            lang = ','.join([f'{ls}({get_lang_for_alias(data[k][ls], "sans-serif")})'
                              for ls in data[k].keys()])
             kk = list(data[k].keys())[0]
             s = templ.format(**{'lang': lang,
@@ -177,7 +177,7 @@ class HtmlRenderer(DataRenderer):
             tables.append(s)
 
         for k in sorted(missing_b.keys()):
-            lang = f'{k}({get_lang_for_alias(missing_b[k], 'sans-serif')})'
+            lang = f'{k}({get_lang_for_alias(missing_b[k], "sans-serif")})'
             templ = '\n'.join(diff_templ)
             s = templ.format(**{'lang': lang,
                                 'old_sans': get_family_for_alias(missing_b[k], 'sans-serif'),
@@ -192,7 +192,7 @@ class HtmlRenderer(DataRenderer):
             tables.append(s)
 
         for k in sorted(missing_a.keys()):
-            lang = f'{k}({get_lang_for_alias(missing_a[k], 'sans-serif')})'
+            lang = f'{k}({get_lang_for_alias(missing_a[k], "sans-serif")})'
             templ = '\n'.join(diff_templ)
             s = templ.format(**{'lang': lang,
                                 'old_sans': 'N/A',
@@ -208,7 +208,7 @@ class HtmlRenderer(DataRenderer):
 
         for k in diffdata.keys():
             line = ['<tr>']
-            lang = ','.join([f'{ls}({get_lang_for_alias(diffdata[k][ls][0], 'sans-serif')})'
+            lang = ','.join([f'{ls}({get_lang_for_alias(diffdata[k][ls][0], "sans-serif")})'
                              for ls in diffdata[k].keys()])
             line.append(f'<td class="lang" rowspan="2">{lang}')
             line.append('<td class="original symbol">-</td>')
@@ -307,7 +307,7 @@ class HtmlRenderer(DataRenderer):
                 'monospace': 'mono',
                 'system-ui': 'ui'
             }
-            s = f'{k}({get_lang_for_alias(data[k], 'sans-serif')}) '
+            s = f'{k}({get_lang_for_alias(data[k], "sans-serif")}) '
             for kk, vv in aliases.items():
                 if kk in data[k]:
                     if 'is_default' not in data[k][kk]:
@@ -448,7 +448,7 @@ class TextRenderer(DataRenderer):
             out.append('  ' + s)
         aliases = ['sans-serif', 'serif', 'monospace', 'system-ui']
         for k in sorted(data.keys()):
-            lang = ','.join([f'{ls}({get_lang_for_alias(data[k][ls], 'sans-serif')})'
+            lang = ','.join([f'{ls}({get_lang_for_alias(data[k][ls], "sans-serif")})'
                              for ls in data[k].keys()])
             cols = [ColoredText(lang)]
             kk = list(data[k].keys())[0]
@@ -457,7 +457,7 @@ class TextRenderer(DataRenderer):
             for s in TextRenderer.format_line(cols):
                 out.append('  ' + s)
         for k in sorted(missing_b.keys()):
-            lang = f'{k}({get_lang_for_alias(missing_b[k], 'sans-serif')})'
+            lang = f'{k}({get_lang_for_alias(missing_b[k], "sans-serif")})'
             cols = [ColoredText(lang)]
             for a in aliases:
                 cols.append(ColoredText(get_family_for_alias(missing_b[k], a)))
@@ -470,7 +470,7 @@ class TextRenderer(DataRenderer):
                                                ColoredText('N/A')]):
                 out.append(colored('+ ' + s, 'green'))
         for k in sorted(missing_a.keys()):
-            lang = f'{k}({get_lang_for_alias(missing_a[k], 'sans-serif')})'
+            lang = f'{k}({get_lang_for_alias(missing_a[k], "sans-serif")})'
             cols = [ColoredText(lang)]
             for a in aliases:
                 cols.append(ColoredText(get_family_for_alias(missing_a[k], a)))
@@ -483,7 +483,7 @@ class TextRenderer(DataRenderer):
             for s in TextRenderer.format_line(cols):
                 out.append(colored('+ ' + s, 'green'))
         for k in diffdata.keys():
-            lang = ','.join([f'{ls}({get_lang_for_alias(diffdata[k][ls][0], 'sans-serif')})'
+            lang = ','.join([f'{ls}({get_lang_for_alias(diffdata[k][ls][0], "sans-serif")})'
                              for ls in diffdata[k].keys()])
             origcol = [ColoredText(lang)]
             diffcol = [ColoredText('')]
@@ -528,7 +528,7 @@ class TextRenderer(DataRenderer):
                 'monospace': 'mono',
                 'system-ui': 'ui'
             }
-            cols = [ColoredText(f'{k}({get_lang_for_alias(data[k], 'sans-serif')})')]
+            cols = [ColoredText(f'{k}({get_lang_for_alias(data[k], "sans-serif")})')]
             for kk, vv in aliases.items():
                 if re.search(fr'(?i:{vv})', get_family_for_alias(data[k], kk)):
                     cols.append(ColoredText(get_family_for_alias(data[k], kk)))
