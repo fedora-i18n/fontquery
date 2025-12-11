@@ -69,6 +69,63 @@ options:
   -V, --version         Show version (default: False)
 ```
 
+```
+usage: fontquery-diff [-h] [-C] [--disable-cache] [--disable-update] [-l LANG] [--loose-comparison] [-o OUTPUT] [-P {fedora,centos}]
+                      [-R {html,text}] [-t {minimal,extra,all}] [-v] [-V]
+                      [compare_a] [compare_b]
+
+Show difference between releases
+
+positional arguments:
+  compare_a             Release to compare (default: rawhide)
+  compare_b             Release to compare (default: local)
+
+options:
+  -h, --help            show this help message and exit
+  -C, --clean-cache     Clean up caches before processing (default: False)
+  --disable-cache       Enforce processing everything even if not updating (default: False)
+  --disable-update      Do not update the container image (default: False)
+  -l, --lang LANG       Language list to dump fonts data into JSON (default: None)
+  --loose-comparison    Do not compare results accurately (default: False)
+  -o, --output OUTPUT   Output file (default: -)
+  -P, --product {fedora,centos}
+                        Product name to operate (default: fedora)
+  -R, --render {html,text}
+  -t, --target {minimal,extra,all}
+                        Query fonts from (default: minimal)
+  -v, --verbose         Show more detailed logs (default: 0)
+  -V, --version         Show version (default: False)
+```
+
+```
+usage: fontquery-pkgdiff [-h] [-C] [--disable-cache] [--disable-update] [-r RELEASE] [-l LANG] [--loose-comparison] [-o OUTPUT]
+                         [-P {fedora,centos}] [-R {html,text}] [-t {minimal,extra,all}] [-v] [-V]
+                         package [package ...]
+
+Check if a given package makes any difference
+
+positional arguments:
+  package               Test package to see difference
+
+options:
+  -h, --help            show this help message and exit
+  -C, --clean-cache     Clean up caches before processing (default: False)
+  --disable-cache       Enforce processing everything even if not updating (default: False)
+  --disable-update      Do not update the container image (default: False)
+  -r, --release RELEASE
+                        Target release to check (default: rawhide)
+  -l, --lang LANG       Language list to dump fonts data into JSON (default: None)
+  --loose-comparison    Do not compare results accurately (default: False)
+  -o, --output OUTPUT   Output file (default: -)
+  -P, --product {fedora,centos}
+                        Product name to operate (default: fedora)
+  -R, --render {html,text}
+  -t, --target {minimal,extra,all}
+                        Query fonts from (default: minimal)
+  -v, --verbose         Show more detailed logs (default: 0)
+  -V, --version         Show version (default: False)
+```
+
 To query sans-serif for Hindi on Fedora 36,
 
 ``` shell
@@ -99,6 +156,12 @@ To check difference between local and reference:
 
 ``` shell
 $ fontquery-diff -R text rawhide local
+```
+
+To check difference but ignore insignificant changes such as filename:
+
+``` shell
+$ fontquery-diff --loose-comparison -R text
 ```
 
 To check difference with certain packages:
