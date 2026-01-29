@@ -83,6 +83,7 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   -C, --clean-cache     Clean up caches before processing (default: False)
+  --diff-only           Show diff only (default: False)
   --disable-cache       Enforce processing everything even if not updating (default: False)
   --disable-update      Do not update the container image (default: False)
   -l, --lang LANG       Language list to dump fonts data into JSON (default: None)
@@ -110,6 +111,7 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   -C, --clean-cache     Clean up caches before processing (default: False)
+  --diff-only           Show diff only (default: False)
   --disable-cache       Enforce processing everything even if not updating (default: False)
   --disable-update      Do not update the container image (default: False)
   -r, --release RELEASE

@@ -66,6 +66,9 @@ def main():
                         '--clean-cache',
                         action='store_true',
                         help='Clean up caches before processing')
+    parser.add_argument('--diff-only',
+                        action='store_true',
+                        help='Show diff only')
     parser.add_argument('--disable-cache',
                         action='store_true',
                         help='Enforce processing everything '
@@ -138,7 +141,8 @@ def main():
         g = htmlformatter.generate_diff(renderer[args.render](), '',
                                         json.loads(retval_a),
                                         json.loads(retval_b),
-                                        not args.loose_comparison)
+                                        not args.loose_comparison,
+                                        args.diff_only)
         for s in next(g):
             args.output.write(s)
         ret = next(g)

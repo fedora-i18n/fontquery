@@ -603,7 +603,7 @@ def generate_table(renderer: DataRenderer, title: str, data: dict[str, Any]) -> 
 
 
 def generate_diff(renderer: DataRenderer, title: str, data: dict[str, Any],
-                  diffdata: dict[str, Any], compare_accurately: bool) -> Iterator[str]:
+                  diffdata: dict[str, Any], compare_accurately: bool, diff_only: bool) -> Iterator[str]:
     """Format difference between two JSONs to HTML."""
     sorteddata = json2data(data, not compare_accurately, True)
     sorteddiffdata = json2data(diffdata, not compare_accurately, True)
@@ -621,7 +621,7 @@ def generate_diff(renderer: DataRenderer, title: str, data: dict[str, Any],
     missing_a = {}
     for k in sorted(list(set(sorteddiffdata.keys()) - set(sorteddata.keys()))):
         missing_a[k] = sorteddiffdata[k]
-    langdata = json2langgroup(matched)
+    langdata = json2langgroup(matched) if not diff_only else {}
     langdiffdata = json2langgroupdiff(notmatched, sorteddiffdata)
 
     renderer.title = title.format(product1=data['id'], product2=diffdata['id'],
