@@ -30,6 +30,7 @@ import json
 import os
 import re
 import sys
+import shutil
 from typing import Any, Dict, Iterator
 NO_MARKDOWN = False
 try:
@@ -414,7 +415,7 @@ class TextRenderer(DataRenderer):
     def format_line(cls, column: list[ColoredText]) -> Iterator[str]:
         ll = []
         retval = ''
-        colsize = int(os.get_terminal_size().columns / len(column))
+        colsize = int(shutil.get_terminal_size().columns / len(column))
         colsize = 15 if colsize <= 15 else colsize
         for i, s in enumerate(column):
             n = len(s)
