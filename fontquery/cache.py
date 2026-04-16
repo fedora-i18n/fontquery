@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Red Hat, Inc.
+# Copyright (C) 2024-2026 Red Hat, Inc.
 # SPDX-License-Identifier: MIT
 
 """Module to deal with cache file"""
@@ -29,53 +29,39 @@ class FontQueryCache:
         return self._cachedir / (tag + '.json')
 
     def _get_current_revision(self) -> str:
-        cmdline = [
-            'podman', 'images', '-a', '--no-trunc', self._repo
-        ]
-        res = subprocess.run(cmdline, capture_output=True, check=False)
+        res = subprocess.run(
+            ['podman', 'images', '-a', '--no-trunc', '--format', '{{.ID}}',
+             self._repo],
+            capture_output=True, check=False)
         if res.returncode != 0:
             sys.tracebacklimit = 0
-            raise RuntimeError('`podman images\' failed with'
-                               f' the error code {res.returncode}')
-        out = res.stdout.decode('utf-8')
-        result = []
-        for ll in out.splitlines():
-            result.append(ll.split())
-        if len(result) < 2:
+            raise RuntimeError(f'`podman images\' failed with '
+                               f'the error code {res.returncode}')
+        lines = res.stdout.decode('utf-8').strip().splitlines()
+        if not lines:
             raise RuntimeError(f'No images available: {self._repo}')
-        tag = result[1][[i for i in range(len(result[0]))
-                         if result[0][i] == 'IMAGE'][0]]
-
-        return tag
+        return lines[0]
 
     def read(self) -> Optional[str]:
-        fn = None
-        out = None
         try:
             fn = self.filename
         except RuntimeError:
             return None
         try:
-            with open(fn, encoding='utf-8') as f:
-                out = f.read()
+            return fn.read_text(encoding='utf-8')
         except FileNotFoundError:
-            pass
-
-        return out
+            return None
 
     def save(self, s: str) -> bool:
-        fn = None
         try:
             fn = self.filename
         except RuntimeError:
             return False
-        with open(fn, 'w', encoding='utf-8') as f:
-            f.write(s)
-
+        fn.write_text(s, encoding='utf-8')
         return True
 
     def delete(self) -> None:
         try:
-            self.filename.unlink(missing_ok=False)
-        except FileNotFoundError:
+            self.filename.unlink(missing_ok=True)
+        except RuntimeError:
             pass

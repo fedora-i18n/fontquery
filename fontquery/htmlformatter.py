@@ -1,5 +1,5 @@
 # formatter.py
-# Copyright (C) 2022-2025 Red Hat, Inc.
+# Copyright (C) 2022-2026 Red Hat, Inc.
 #
 # Authors:
 #   Akira TAGOH  <tagoh@redhat.com>
@@ -32,6 +32,10 @@ import re
 import sys
 import shutil
 from typing import Any, Dict, Iterator
+
+# Font family aliases
+FONT_ALIASES = ['sans-serif', 'serif', 'monospace', 'system-ui']
+
 NO_MARKDOWN = False
 try:
     import markdown
@@ -162,7 +166,6 @@ class HtmlRenderer(DataRenderer):
         tables = []
 
         tables.append('\n'.join(header_templ))
-        aliases = ['sans-serif', 'serif', 'monospace', 'system-ui']
 
         for k in sorted(data.keys()):
             templ = '\n'.join(nodiff_templ)
@@ -216,9 +219,15 @@ class HtmlRenderer(DataRenderer):
             diff = []
             kk = list(diffdata[k].keys())[0]
             vv = diffdata[k][kk]
-            for a in aliases:
-                if get_family_for_alias(vv[0], a) == get_family_for_alias(vv[1], a):
-                    if get_file_for_alias(vv[0], a) == get_file_for_alias(vv[1], a):
+            # Cache alias lookups to avoid O(n²) dictionary access
+            vv0_families = {a: get_family_for_alias(vv[0], a) for a in FONT_ALIASES}
+            vv1_families = {a: get_family_for_alias(vv[1], a) for a in FONT_ALIASES}
+            vv0_files = {a: get_file_for_alias(vv[0], a) for a in FONT_ALIASES}
+            vv1_files = {a: get_file_for_alias(vv[1], a) for a in FONT_ALIASES}
+
+            for a in FONT_ALIASES:
+                if vv0_families[a] == vv1_families[a]:
+                    if vv0_files[a] == vv1_files[a]:
                         diff.append(None)
                         attr = 'rowspan="2"'
                     else:
@@ -229,7 +238,7 @@ class HtmlRenderer(DataRenderer):
                     attr = 'class="original"'
                 line.append('<td {attr}>{family}</td>'.format(**{
                     'attr': attr,
-                    'family': get_family_for_alias(vv[0], a)
+                    'family': vv0_families[a]
                 }))
             line.append('</tr><tr>')
             line.append('<td class="diff symbol">+</td>')
@@ -244,52 +253,32 @@ class HtmlRenderer(DataRenderer):
             tables.append('\n'.join(line))
 
         header = [
-            ('<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"'
-             ' \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">'),
+            '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"'
+            ' "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">',
             '<html>',
-            ('<head><title>Fonts table for %(title)s</title>'
-             '<style type=\"text/css\">'),
-            'table {',
-            '  border-collapse: collapse;',
-            '}',
-            'table, th, td {',
-            '  border-style: solid;',
-            '  border-width: 1px;',
-            '  border-color: #000000;',
-            '}',
-            '.lang {',
-            '  word-break: break-all;',
-            '  width: 40%%;',
-            '}',
-            '.symbol {',
-            '  min-width: 10px;',
-            '  width: 1%%',
-            '}',
-            '.original {',
-            '  color: red',
-            '}',
-            '.diff {',
-            '  color: green',
-            '}',
+            '<head><title>Fonts table for %(title)s</title>'
+            '<style type="text/css">',
+            'table { border-collapse: collapse; }',
+            'table, th, td { border-style: solid; border-width: 1px; border-color: #000000; }',
+            '.lang { word-break: break-all; width: 40%%; }',
+            '.symbol { min-width: 10px; width: 1%%; }',
+            '.original { color: red; }',
+            '.diff { color: green; }',
             '</style></head>',
             '<body>',
+            '<div name="note" style="font-size: 10px; color: gray;">'
+            'Note: No symbols at 2nd column means no difference.'
+            ' -/+ symbols means there are difference between '
+            f'{self.imagetype} and {self.imagedifftype}</div>',
+            '<div name="note" style="font-size: 10px; color: gray;">'
+            f'Legend: - ({self.imagetype}), + ({self.imagedifftype})</div>',
         ]
-        header.append(('<div name="note" style="font-size: 10px; color: gray;"'
-                       '>Note: No symbols at 2nd column means no difference.'
-                       ' -/+ symbols means there are difference between '
-                       f'{self.imagetype} and {self.imagedifftype}</div>'))
-        header.append(('<div name="note" selftyle="font-size: 10px; color: gray;"'
-                       f">Legend: - ({self.imagetype}),"
-                       f" + ({self.imagedifftype})</div>"))
         footer = [
-            '</tr>',
-            '</tbody>',
-            '</table>',
-            ('<div name=\"footer\" style=\"text-align:right;float:right;'
-             'font-size:10px;color:gray;\">Generated by fontquery'
-             '(%(image)s image) + %(progname)s</div>'),
-            '</body>',
-            '</html>'
+            '</tr></tbody></table>',
+            '<div name="footer" style="text-align:right;float:right;'
+            'font-size:10px;color:gray;">Generated by fontquery'
+            '(%(image)s image) + %(progname)s</div>',
+            '</body></html>'
         ]
         yield '\n'.join(header) % {'title': self.title}
         yield from tables
@@ -329,33 +318,22 @@ class HtmlRenderer(DataRenderer):
             md.append(s)
 
         header = [
-            ('<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"'
-             ' \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">'),
+            '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"'
+            ' "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">',
             '<html>',
-            ('<head><title>Fonts table for %(title)s</title>'
-             '<style type=\"text/css\">'),
-            'table {',
-            '  border-collapse: collapse;',
-            '}',
-            'table, th, td {',
-            '  border-style: solid;',
-            '  border-width: 1px;',
-            '  border-color: #000000;',
-            '}',
-            '.match {',
-            '}',
-            '.notmatch {',
-            '  color: red',
-            '}',
-            '.dontcare {',
-            '  color: orange',
-            '}',
+            '<head><title>Fonts table for %(title)s</title>'
+            '<style type="text/css">',
+            'table { border-collapse: collapse; }',
+            'table, th, td { border-style: solid; border-width: 1px; border-color: #000000; }',
+            '.match { }',
+            '.notmatch { color: red; }',
+            '.dontcare { color: orange; }',
             '</style></head>',
             '<body>',
-            ('<div name="note" style="font-size: 10px; color: gray;">'
-             'Note: orange colored name means needing some attention'
-             ' because there are no clue in family name if a font is'
-             ' certainly assigned to proper generic alias</div>'),
+            '<div name="note" style="font-size: 10px; color: gray;">'
+            'Note: orange colored name means needing some attention'
+            ' because there are no clue in family name if a font is'
+            ' certainly assigned to proper generic alias</div>',
         ]
         match self.imagetype:
             case 'minimal':
@@ -373,11 +351,10 @@ class HtmlRenderer(DataRenderer):
 
         footer = [
             '</table>',
-            ('<div name=\"footer\" style=\"text-align:right;float:right;'
-             'font-size:10px;color:gray;\">Generated by fontquery'
-             '(%(image)s image) + %(progname)s</div>'),
-            '</body>',
-            '</html>'
+            '<div name="footer" style="text-align:right;float:right;'
+            'font-size:10px;color:gray;">Generated by fontquery'
+            '(%(image)s image) + %(progname)s</div>',
+            '</body></html>'
         ]
         yield '\n'.join(header) % {'title': self.title}
         yield markdown.markdown('\n'.join(md),
@@ -447,20 +424,19 @@ class TextRenderer(DataRenderer):
                                                        attrs=['bold'])
                                            ]):
             out.append('  ' + s)
-        aliases = ['sans-serif', 'serif', 'monospace', 'system-ui']
         for k in sorted(data.keys()):
             lang = ','.join([f'{ls}({get_lang_for_alias(data[k][ls], "sans-serif")})'
                              for ls in data[k].keys()])
             cols = [ColoredText(lang)]
             kk = list(data[k].keys())[0]
-            for a in aliases:
+            for a in FONT_ALIASES:
                 cols.append(ColoredText(get_family_for_alias(data[k][kk], a)))
             for s in TextRenderer.format_line(cols):
                 out.append('  ' + s)
         for k in sorted(missing_b.keys()):
             lang = f'{k}({get_lang_for_alias(missing_b[k], "sans-serif")})'
             cols = [ColoredText(lang)]
-            for a in aliases:
+            for a in FONT_ALIASES:
                 cols.append(ColoredText(get_family_for_alias(missing_b[k], a)))
             for s in TextRenderer.format_line(cols):
                 out.append(colored('- ' + s, 'red'))
@@ -473,7 +449,7 @@ class TextRenderer(DataRenderer):
         for k in sorted(missing_a.keys()):
             lang = f'{k}({get_lang_for_alias(missing_a[k], "sans-serif")})'
             cols = [ColoredText(lang)]
-            for a in aliases:
+            for a in FONT_ALIASES:
                 cols.append(ColoredText(get_family_for_alias(missing_a[k], a)))
             for s in TextRenderer.format_line([ColoredText(''),
                                                ColoredText('N/A'),
@@ -490,7 +466,7 @@ class TextRenderer(DataRenderer):
             diffcol = [ColoredText('')]
             kk = list(diffdata[k].keys())[0]
             vv = diffdata[k][kk]
-            for a in aliases:
+            for a in FONT_ALIASES:
                 if get_family_for_alias(vv[0], a) == get_family_for_alias(vv[1], a):
                     if get_file_for_alias(vv[0], a) == get_file_for_alias(vv[1], a):
                         diffcol.append(ColoredText(''))
@@ -578,12 +554,11 @@ def json2langgroupdiff(data: dict[str, Any],
                        diffdata: dict[str, Any]) -> dict[str, dict[str, list[Any, Any]]]:
     """Restructure JSON format data."""
     retval = {}
-    aliases = ['sans-serif', 'serif', 'monospace', 'system-ui']
     for k, v in data.items():
         key = ''
-        for a in aliases:
+        for a in FONT_ALIASES:
             key += f'|{get_family_for_alias(v, a)}'
-        for a in aliases:
+        for a in FONT_ALIASES:
             key += f'|{get_family_for_alias(diffdata[k], a)}'
         if key not in retval:
             retval[key] = {}

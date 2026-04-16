@@ -40,12 +40,12 @@ def build_lang_flags(lang: Optional[List[str]]) -> List[str]:
 
 def get_fontquery_client_path() -> str:
     """Get path to fontquery-client executable."""
-    fqcexec = 'fontquery-client'
-    if not shutil.which(fqcexec):
-        if client is not None:
-            return client.__file__
-        raise RuntimeError('fontquery-client not found')
-    return shutil.which(fqcexec)
+    fqcexec = shutil.which('fontquery-client')
+    if fqcexec:
+        return fqcexec
+    if client is not None:
+        return client.__file__
+    raise RuntimeError('fontquery-client not found')
 
 
 def run_container_query(release: str, args: argparse.Namespace, mode: str,
@@ -70,18 +70,16 @@ def run_container_query(release: str, args: argparse.Namespace, mode: str,
 
     if release == 'local':
         fqcexec = get_fontquery_client_path()
-        cmdline = ['python', fqcexec, '-m', mode] + \
-                  build_verbose_flags(args.verbose) + \
-                  build_lang_flags(args.lang) + \
-                  extra_args
+        cmdline = ['python', fqcexec, '-m', mode]
     else:
         cmdline = [
             'podman', 'run', '--rm',
             f'ghcr.io/fedora-i18n/fontquery/{args.product}/{args.target}:{release}',
             '-m', mode
-        ] + build_verbose_flags(args.verbose) + \
-            build_lang_flags(args.lang) + \
-            extra_args
+        ]
+
+    cmdline += build_verbose_flags(args.verbose) + \
+               build_lang_flags(args.lang) + extra_args
 
     if args.verbose:
         print('# ' + ' '.join(cmdline), file=sys.stderr)

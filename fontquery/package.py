@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Red Hat, Inc.
+# Copyright (C) 2024-2026 Red Hat, Inc.
 # SPDX-License-Identifier: MIT
 
 import os
@@ -8,7 +8,7 @@ import subprocess
 import tempfile
 from enum import IntEnum, StrEnum, auto
 from pathlib import Path
-from typing import Iterator
+from typing import Iterator, List, Union, Optional, Any
 import yaml
 
 
@@ -49,25 +49,21 @@ class InvalidFormat(FqException):
 class Font2Package:
 
     @classmethod
-    def get_source_package_name(cls, pkg) -> Iterator[str]:
+    def get_source_package_name(cls, pkg: Union[str, List[str]]) -> Iterator[str]:
         if not isinstance(pkg, list):
             pkg = [pkg]
         for p in pkg:
-            cmdline = ['rpm', '-q', '--qf', '%{version}-%{release}', p]
-            retver = subprocess.run(cmdline, capture_output=True,
-                                    check=False)
-            if retver.returncode != 0:
+            # Combine both queries into single rpm call for efficiency
+            cmdline = ['rpm', '-q', '--qf', '%{version}-%{release}|%{sourcerpm}', p]
+            ret = subprocess.run(cmdline, capture_output=True, check=False)
+            if ret.returncode != 0:
                 raise PackageNotFound(p)
-            cmdline = ['rpm', '-q', '--qf', '%{sourcerpm}', p]
-            retsrpm = subprocess.run(cmdline, capture_output=True,
-                                     check=False)
-            if retsrpm.returncode != 0:
-                raise PackageNotFound(p)
-            yield re.sub(fr'-{retver.stdout.decode("utf-8")}.*', '',
-                         retsrpm.stdout.decode('utf-8'))
+            output = ret.stdout.decode('utf-8')
+            version_release, sourcerpm = output.split('|', 1)
+            yield re.sub(fr'-{version_release}.*', '', sourcerpm)
 
     @classmethod
-    def get_package_name_from_file(cls, fontfile) -> Iterator[str]:
+    def get_package_name_from_file(cls, fontfile: str) -> Iterator[str]:
         if shutil.which('rpm'):
             cmdline = ['rpm', '-qf', '--qf', '%{name}', fontfile]
             retval = subprocess.run(cmdline, capture_output=True,
@@ -135,7 +131,7 @@ class ParamList(UpperStrEnum):
     FONT_VALIDATE_EXCLUDE_FILES = auto()
 
 
-def get_var(version):
+def get_var(version: int):
     aVarList = [VarList, VarListV2]
     if version <= 0 or version > len(aVarList):
         return VarList
@@ -163,24 +159,20 @@ class PackageRepoCache:
     def get(self, pkg: str, branch: str = 'rawhide') -> tempfile.TemporaryDirectory:
         if pkg not in self._cache:
             tmpdir = tempfile.TemporaryDirectory()
-            cmdline = ['git', 'clone', self._url + f'{pkg}.git', tmpdir.name]
-            retval = subprocess.run(cmdline, capture_output=True,
-                                    check=False)
+            retval = subprocess.run(
+                ['git', 'clone', f'{self._url}{pkg}.git', tmpdir.name],
+                capture_output=True, check=False)
             if retval.returncode != 0:
                 tmpdir.cleanup()
                 raise NoPackageRepo(f'{pkg}: {retval.stderr.decode("utf-8")}')
             self.add(pkg, tmpdir)
         else:
             tmpdir = self._cache[pkg]
-        cwd = Path.cwd()
-        try:
-            os.chdir(tmpdir.name)
-            cmdline = ['git', 'switch', branch if branch == 'rawhide' else self._branch.format(branch)]
-            retval = subprocess.run(cmdline,
-                                    capture_output=True,
-                                    check=False)
-        finally:
-            os.chdir(cwd)
+
+        branch_name = branch if branch == 'rawhide' else self._branch.format(branch)
+        retval = subprocess.run(
+            ['git', '-C', tmpdir.name, 'switch', branch_name],
+            capture_output=True, check=False)
         if retval.returncode != 0:
             tmpdir.cleanup()
             raise NoBranchInPackageRepo(branch)
@@ -199,23 +191,23 @@ class PackageRepo:
         tmpdir = cache.get(srpm, branch)
         self._parse_plan(tmpdir.name, pkg, family)
 
-    def is_default_sans(self, family, lang):
+    def is_default_sans(self, family: str, lang: str) -> bool:
         return family in self._is_default and self._is_default[family]['sans'].get(lang, 0)
 
-    def is_default_serif(self, family, lang):
+    def is_default_serif(self, family: str, lang: str) -> bool:
         return family in self._is_default and self._is_default[family]['serif'].get(lang, 0)
 
-    def is_default_mono(self, family, lang):
+    def is_default_mono(self, family: str, lang: str) -> bool:
         return family in self._is_default and self._is_default[family]['mono'].get(lang, 0)
 
-    def is_default_systemui(self, family, lang):
+    def is_default_systemui(self, family: str, lang: str) -> bool:
         return family in self._is_default and self._is_default[family]['systemui'].get(lang, 0)
 
     @property
-    def languages(self):
+    def languages(self) -> List[str]:
         return self._lang_coverage
 
-    def _parse_plan(self, repo: str, pkg: str, family: str):
+    def _parse_plan(self, repo: str, pkg: str, family: str) -> None:
         p = Path(repo) / 'plans'
         if p.exists() and p.is_dir():
             for fn in p.glob('**/*.fmf'):
@@ -258,9 +250,7 @@ class PackageRepo:
         ls = [re.sub(r'^-$', 'en', ls).replace('-', '_') for ls in set_default(data,
                                                                                enum.FONT_LANG,
                                                                                'en').split(',')]
-        set1 = set(self._lang_coverage)
-        set2 = set(ls)
-        newls = sorted(list(set2 - set1))
+        newls = sorted(set(ls) - set(self._lang_coverage))
         self._lang_coverage += newls
 
         for l in ls:
