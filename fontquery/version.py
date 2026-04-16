@@ -24,13 +24,11 @@
 """Module to deal with fontquery version."""
 
 import os
+from pathlib import Path
 
 
 def fontquery_version() -> str:
     """Return fontquery version in string."""
-    retval = None
-    with open(os.path.join(os.path.dirname(__file__), 'version.txt'),
-              'r', encoding='utf-8') as f:
-        retval = f.read().strip()
-
-    return retval
+    version_file = Path(__file__).parent / 'version.txt'
+    with open(version_file, 'r', encoding='utf-8') as f:
+        return f.read().strip()

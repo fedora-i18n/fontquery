@@ -33,6 +33,7 @@ import sys
 import types
 from collections import Counter
 from pathlib import Path
+from typing import Dict, Any
 import langtable
 try:
     import fontquery_debug  # noqa: F401
@@ -72,7 +73,7 @@ except ModuleNotFoundError:
     ]
 
 
-def get_version(os_release) -> str:
+def get_version(os_release: Dict[str, str]) -> str:
     if os_release['ID'] == 'fedora':
         if ('VARIANT_ID' in os_release and os_release['VARIANT_ID'] == 'eln') or\
            os_release['REDHAT_SUPPORT_PRODUCT_VERSION'] == 'rawhide':
@@ -81,7 +82,7 @@ def get_version(os_release) -> str:
     return os_release['VERSION_ID']
 
 
-def dump(params: object) -> str:
+def dump(params: argparse.Namespace) -> str:
     """Dump fontquery result in JSON."""
     p = Path('/etc/os-release')
     with open(p, encoding='utf-8') as f:

@@ -30,6 +30,7 @@ import re
 import shutil
 import subprocess
 import sys
+from typing import Optional
 try:
     import fontquery_debug  # noqa: F401
 except ModuleNotFoundError:
@@ -42,53 +43,24 @@ except ModuleNotFoundError:
 from fontquery import htmlformatter  # noqa: F401
 from fontquery.cache import FontQueryCache  # noqa: F401
 from fontquery.container import ContainerImage  # noqa: F401
+from fontquery import utils  # noqa: F401
 
 
-def get_json(release, args):
-    if args.product == 'centos':
-        if re.match(r'\d+(\-development)?$', release):
-            release = 'stream' + release
-    if release == 'local':
-        fqcexec = 'fontquery-client'
-        if not shutil.which(fqcexec):
-            fqcexec = client.__file__
-        else:
-            fqcexec = shutil.which(fqcexec)
-        cmdline = ['python', fqcexec, '-m', 'json'] + (
-            ['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
-            else []) + ([] if args.lang is None else
-                        ['-l=' + ls for ls in args.lang])
-    else:
-        cmdline = [
-            'podman', 'run', '--rm',
-            'ghcr.io/fedora-i18n/fontquery/'
-            f'{args.product}/{args.target}:{release}',
-            '-m', 'json'
-        ] + (['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
-             else []) + ([] if args.lang is None else
-                         ['-l=' + ls for ls in args.lang])
-
-    if args.verbose:
-        print('# ' + ' '.join(cmdline), file=sys.stderr)
-
-    result = subprocess.run(cmdline, stdout=subprocess.PIPE, check=False)
-    if result.returncode != 0:
-        sys.tracebacklimit = 0
-        raise RuntimeError('`podman run\' failed with '
-                           'the error code {result.returncode}')
-    out = result.stdout.decode('utf-8')
-
-    return out
+def get_json(release: str, args: argparse.Namespace) -> str:
+    """Get JSON output from fontquery."""
+    return utils.run_container_query(release, args, 'json')
 
 
-def load_json(release, args, fcache):
+def load_json(release: str, args: argparse.Namespace, fcache: bool) -> Optional[str]:
+    """Load JSON from cache or query."""
     out = None
 
     if release == 'local':
         out = get_json(release, args)
     else:
         if not args.disable_update:
-            c = ContainerImage(args.product, release, args.verbose)
+            release_normalized = utils.normalize_release(release, args.product)
+            c = ContainerImage(args.product, release_normalized, args.verbose)
             c.target = args.target
             if not c.pull(args):
                 raise RuntimeError('`podman pull\' failed')

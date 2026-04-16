@@ -217,32 +217,43 @@ class ContainerImage:
         if self.__verbose:
             print('# ' + ' '.join(cmdline))
         if not ('try_run' in kwargs and kwargs['try_run']):
+            cname_created = None
             try:
                 res = subprocess.run(cmdline, capture_output=True, check=False)
                 if res.returncode == 0:
+                    cname_created = cname
                     yield cname
+                else:
+                    raise RuntimeError(f'Failed to create container: {res.stderr.decode("utf-8")}')
+            except (subprocess.SubprocessError, OSError) as e:
+                raise RuntimeError(f'Container creation failed: {e}') from e
             finally:
-                if self.__verbose:
-                    print('# ' + ' '.join(cleancmdline))
-                subprocess.run(cleancmdline, capture_output=True, check=False)
+                # Only cleanup if container was created
+                if cname_created:
+                    if self.__verbose:
+                        print('# ' + ' '.join(cleancmdline))
+                    subprocess.run(cleancmdline, capture_output=True, check=False)
 
     def _start(self, session='', *args, **kwargs) -> subprocess.CompletedProcess[str]:
         """Start a container"""
-        cmdline = f'podman start -a {session}'
+        cmdline = ['podman', 'start', '-a', session]
         if self.__verbose:
-            print('# ' + cmdline)
+            print('# ' + ' '.join(cmdline))
         res = subprocess.run(cmdline, stdout=subprocess.PIPE,
-                             check=False, shell=True)
+                             check=False)
         return res
 
     def _exec(self, session='', cmd='/bin/bash', stderr=None, *args, **kwargs) -> subprocess.CompletedProcess[str]:
         """Execute in a container"""
-        cmdline = f'podman start {session} > /dev/null;'\
-            f' podman exec -i {session} {cmd}'
+        # Start container first (output suppressed)
+        subprocess.run(['podman', 'start', session], stdout=subprocess.DEVNULL,
+                       check=False)
+        # Execute command in container
+        cmdline = ['podman', 'exec', '-i', session] + (cmd.split() if isinstance(cmd, str) else cmd)
         if self.__verbose:
-            print('# ' + cmdline)
+            print('# ' + ' '.join(cmdline))
         res = subprocess.run(cmdline, stdout=subprocess.PIPE, stderr=stderr,
-                             check=False, shell=True)
+                             check=False)
         return res
 
     def _commit(self, session='', *args, **kwargs) -> None:

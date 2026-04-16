@@ -8,6 +8,7 @@ import importlib.metadata
 import json
 import shutil
 import sys
+from typing import Optional, List
 try:
     import fontquery_debug  # noqa: F401
 except ModuleNotFoundError:
@@ -17,7 +18,7 @@ from fontquery.cache import FontQueryCache  # noqa: F401
 from fontquery.container import ContainerImage  # noqa: F401
 
 
-def load_json(release, packages, args, fcache):
+def load_json(release: str, packages: Optional[List[str]], args: argparse.Namespace, fcache: bool) -> Optional[str]:
     out = None
     fqc = None
 

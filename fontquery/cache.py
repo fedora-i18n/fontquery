@@ -7,13 +7,14 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import Optional
 from xdg import BaseDirectory
 
 
 class FontQueryCache:
     """cache handling class"""
 
-    def __init__(self, platform, release, target):
+    def __init__(self, platform: str, release: str, target: str) -> None:
         self._base_cachedir = BaseDirectory.save_cache_path('fontquery')
         self._cachedir = Path(self._base_cachedir) /\
             f'{platform}-{release}-{target}'
@@ -41,16 +42,13 @@ class FontQueryCache:
         for ll in out.splitlines():
             result.append(ll.split())
         if len(result) < 2:
-            raise RuntimeError('No images available: {self._repo}')
+            raise RuntimeError(f'No images available: {self._repo}')
         tag = result[1][[i for i in range(len(result[0]))
                          if result[0][i] == 'IMAGE'][0]]
-        cmdline = [
-            'podman', 'inspect', tag
-        ]
 
         return tag
 
-    def read(self) -> str:
+    def read(self) -> Optional[str]:
         fn = None
         out = None
         try:
@@ -65,7 +63,7 @@ class FontQueryCache:
 
         return out
 
-    def save(self, s):
+    def save(self, s: str) -> bool:
         fn = None
         try:
             fn = self.filename
@@ -76,7 +74,7 @@ class FontQueryCache:
 
         return True
 
-    def delete(self):
+    def delete(self) -> None:
         try:
             self.filename.unlink(missing_ok=False)
         except FileNotFoundError:

@@ -27,6 +27,7 @@ import sys
 import os
 import argparse
 import shutil
+from typing import Optional
 try:
     import fontquery_debug  # noqa: F401
 except ModuleNotFoundError:
@@ -34,7 +35,7 @@ except ModuleNotFoundError:
 from fontquery import container  # noqa: F401
 
 
-def do_build(product, release, target, push, args):
+def do_build(product: str, release: str, target: str, push: bool, args: argparse.Namespace) -> bool:
     bldr = container.ContainerImage(product, release, args.verbose)
     bldr.target = target
     if not args.skip_build:
@@ -52,7 +53,7 @@ def do_build(product, release, target, push, args):
     return True
 
 
-def do_push(product, release, target, args):
+def do_push(product: str, release: str, target: str, args: argparse.Namespace) -> bool:
     bldr = container.ContainerImage(product, release, args.verbose)
     bldr.target = target
     if not bldr.push(**vars(args)):

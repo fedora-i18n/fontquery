@@ -33,6 +33,7 @@ import tempfile
 import warnings
 from collections import Counter
 from pathlib import Path
+from typing import Optional
 try:
     import fontquery_debug  # noqa: F401
 except ModuleNotFoundError:
@@ -45,52 +46,22 @@ except ModuleNotFoundError:
     LOCAL_NOT_SUPPORTED = True
 from fontquery.cache import FontQueryCache  # noqa: F401
 from fontquery.container import ContainerImage  # noqa: F401
+from fontquery import utils  # noqa: F401
 
 
-def run(release, args):
-    if args.product == 'centos':
-        if re.match(r'\d+(\-development)?$', release):
-            release = 'stream' + release
-    if release == 'local':
-        fqcexec = 'fontquery-client'
-        if not shutil.which(fqcexec):
-            fqcexec = client.__file__
-        else:
-            fqcexec = shutil.which(fqcexec)
-        cmdline = ['python', fqcexec, '-m', args.mode] + (
-            ['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
-            else []) + ([] if args.lang is None else
-                        [' '.join(['-l=' + ls
-                                   for ls in args.lang])]) + args.args
-    else:
-        if not args.disable_update:
-            c = ContainerImage(args.product, release, args.verbose)
-            c.target = args.target
-            if not c.pull(args):
-                raise RuntimeError('`podman pull\' failed')
-        cmdline = [
-            'podman', 'run', '--rm',
-            'ghcr.io/fedora-i18n/fontquery/'
-            f'{args.product}/{args.target}:{release}',
-            '-m', args.mode
-        ] + (['-' + ''.join(['v' * (args.verbose - 1)])] if args.verbose > 1
-             else []) + ([] if args.lang is None else
-                         ['-l=' + ls
-                          for ls in args.lang]) + args.args
+def run(release: str, args: argparse.Namespace) -> str:
+    """Execute fontquery in container or locally."""
+    if release != 'local' and not args.disable_update:
+        release_normalized = utils.normalize_release(release, args.product)
+        c = ContainerImage(args.product, release_normalized, args.verbose)
+        c.target = args.target
+        if not c.pull(args):
+            raise RuntimeError('`podman pull\' failed')
 
-    if args.verbose:
-        print('# ' + ' '.join(cmdline), file=sys.stderr)
-
-    result = subprocess.run(cmdline, stdout=subprocess.PIPE, check=False)
-    if result.returncode != 0:
-        sys.tracebacklimit = 0
-        raise RuntimeError('`podman run\' failed with '
-                           f'the error code {result.returncode}')
-
-    return result.stdout.decode('utf-8')
+    return utils.run_container_query(release, args, args.mode, args.args)
 
 
-def load(release, args, fcache):
+def load(release: str, args: argparse.Namespace, fcache: bool) -> Optional[str]:
     out = None
 
     if release == 'local':
@@ -202,7 +173,22 @@ def main():
     if args.version:
         print(importlib.metadata.version('fontquery'))
         sys.exit(0)
-    ofile = str(Path(args.output_dir) / args.filename_format)
+
+    # Validate output directory
+    output_dir = Path(args.output_dir).resolve()
+    if not output_dir.exists():
+        sys.tracebacklimit = 0
+        raise RuntimeError(f'Output directory does not exist: {output_dir}')
+    if not output_dir.is_dir():
+        sys.tracebacklimit = 0
+        raise RuntimeError(f'Output path is not a directory: {output_dir}')
+
+    # Validate filename format to prevent path traversal
+    if '..' in args.filename_format or args.filename_format.startswith('/'):
+        sys.tracebacklimit = 0
+        raise RuntimeError('Invalid filename format: path traversal not allowed')
+
+    ofile = str(output_dir / args.filename_format)
     if args.verbose:
         print(f'* Product: {args.product}', file=sys.stderr)
         print(f'* Release: {args.release}', file=sys.stderr)
