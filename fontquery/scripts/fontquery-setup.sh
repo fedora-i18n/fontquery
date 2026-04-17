@@ -66,6 +66,14 @@ update_fontquery() {
         $PIP install "fontquery >= 1.20"
     fi
     rm /tmp/fontquery* || :
+
+    # Update version.txt with build timestamp
+    echo "** Updating version.txt with build date"
+    BUILD_DATE=$(date -u +%Y%m%d%H%M%S)
+    FONTQUERY_LOC=$($PIP show fontquery | grep "^Location:" | cut -d' ' -f2)
+    VERSION_FILE="$FONTQUERY_LOC/fontquery/version.txt"
+    echo "$BUILD_DATE" > "$VERSION_FILE"
+    echo "** Updated version.txt to $BUILD_DATE"
 }
 
 while getopts chit:uv OPT; do
