@@ -100,16 +100,6 @@ python3 -m build
 pip3 install --user dist/fontquery*.whl
 ```
 
-### Git Hooks
-
-**IMPORTANT:** Before committing, configure git hooks:
-
-```bash
-git config core.hooksPath hooks
-```
-
-The pre-commit hook enforces code quality checks.
-
 ### Version Bumping
 
 Version is defined in **one place**: `pyproject.toml:7`
