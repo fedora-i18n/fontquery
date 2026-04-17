@@ -20,7 +20,8 @@ COPY ${setup} ${dist} /tmp/
 RUN echo "* Setup base image"; /usr/local/bin/fontquery-setup.sh -t base && \
     echo "* Updating version.txt with build date"; \
     BUILD_DATE=$(date -u +%Y%m%d%H%M%S) && \
-    VERSION_FILE=$(python3 -c "import sysconfig; import os; print(os.path.join(sysconfig.get_path('purelib'), 'fontquery', 'version.txt'))") && \
+    FONTQUERY_LOC=$(pip show fontquery | grep "^Location:" | cut -d' ' -f2) && \
+    VERSION_FILE="$FONTQUERY_LOC/fontquery/version.txt" && \
     echo "$BUILD_DATE" > "$VERSION_FILE" && \
     echo "* Updated version.txt to $BUILD_DATE"
 
