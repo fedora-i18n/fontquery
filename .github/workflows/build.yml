@@ -24,7 +24,7 @@ jobs:
       centos-matrix: ${{ steps.centos.outputs.releases }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Get supported releases for Fedora
         id: fedora
         uses: ./.github/actions/supported_releases
@@ -44,7 +44,7 @@ jobs:
         target: ["minimal", "extra"]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Start the build
         uses: ./.github/actions/build
         with:
@@ -67,7 +67,7 @@ jobs:
         target: ["minimal", "extra"]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Start the build
         uses: ./.github/actions/build
         with:
