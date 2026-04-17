@@ -48,7 +48,7 @@ include-package-data = false
 
 [tool.setuptools.packages.find]
 namespaces = true
-exclude = [ "*debug*" ]
+exclude = [ "*debug*", "tests*" ]
 
 [tool.setuptools.package-data]
 fontquery = [ "version.txt" ]
