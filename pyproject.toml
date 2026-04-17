@@ -54,3 +54,10 @@ exclude = [ "*debug*" ]
 fontquery = [ "version.txt" ]
 "fontquery.scripts" = [ "fontquery-setup.sh" ]
 "fontquery.data" = [ "Containerfile*" ]
+
+[project.optional-dependencies]
+dev = [
+  "pytest >= 7.0",
+  "pytest-cov >= 4.0",
+  "pytest-mock >= 3.10",
+]
