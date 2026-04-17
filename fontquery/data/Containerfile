@@ -17,7 +17,12 @@ LABEL org.opencontainers.image.ref.name="$NAME" \
 # Install
 COPY ${setup} /usr/local/bin/fontquery-setup.sh
 COPY ${setup} ${dist} /tmp
-RUN echo "* Setup base image"; /usr/local/bin/fontquery-setup.sh -t base
+RUN echo "* Setup base image"; /usr/local/bin/fontquery-setup.sh -t base && \
+    echo "* Updating version.txt with build date"; \
+    BUILD_DATE=$(date -u +%Y%m%d%H%M%S) && \
+    VERSION_FILE=$(python3 -c "import fontquery; import os; print(os.path.join(os.path.dirname(fontquery.__file__), 'version.txt'))") && \
+    echo "$BUILD_DATE" > "$VERSION_FILE" && \
+    echo "* Updated version.txt to $BUILD_DATE"
 
 #
 # minimal image

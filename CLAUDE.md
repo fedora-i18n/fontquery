@@ -116,6 +116,8 @@ Version is defined in **one place**: `pyproject.toml:7`
 
 The version number follows: MAJOR.MINOR format (e.g., 1.33)
 
+**Container Images:** When building container images, `version.txt` is automatically updated with the build timestamp in `YYYYMMDDHHmmss` format (UTC). This allows tracking of exact container build dates independently of the package version.
+
 ### Container Development
 
 Build development containers with local code:
