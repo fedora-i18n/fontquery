@@ -38,20 +38,21 @@ from pathlib import Path
 from typing import Iterator
 
 try:
-    FQ_SCRIPT_PATH = files('fontquery.scripts')
+    FQ_SCRIPT_PATH = files("fontquery.scripts")
 except ModuleNotFoundError:
-    FQ_SCRIPT_PATH = Path(__file__).parent / 'scripts'
+    FQ_SCRIPT_PATH = Path(__file__).parent / "scripts"
 try:
-    FQ_DATA_PATH = files('fontquery.data')
+    FQ_DATA_PATH = files("fontquery.data")
 except ModuleNotFoundError:
-    FQ_DATA_PATH = Path(__file__).parent / 'data'
+    FQ_DATA_PATH = Path(__file__).parent / "data"
 try:
-    FQ_VERSION = importlib.metadata.version('fontquery')
+    FQ_VERSION = importlib.metadata.version("fontquery")
 except ModuleNotFoundError:
     import tomli
-    tomlfile = Path(__file__).parent.parent / 'pyproject.toml'
-    with open(tomlfile, 'r', encoding='utf-8') as f:
-        FQ_VERSION = tomli.load(f)['project']['version']
+
+    tomlfile = Path(__file__).parent.parent / "pyproject.toml"
+    with open(tomlfile, "r", encoding="utf-8") as f:
+        FQ_VERSION = tomli.load(f)["project"]["version"]
 
 
 class ContainerImage:
@@ -62,25 +63,53 @@ class ContainerImage:
         self.__version = version
         self.__target = None
         self.__verbose = verbose
-        if product == 'fedora':
-            if version == 'eln':
-                self.__registry = 'quay.io/fedoraci/fedora'
+        if product == "fedora":
+            if version == "eln":
+                self.__registry = "quay.io/fedoraci/fedora"
             else:
-                self.__registry = 'quay.io/fedora/fedora'
-        elif product == 'centos':
-            self.__registry = 'quay.io/centos/centos'
-            if re.match(r'\d+(\-development)?$', version):
-                self.__version = 'stream' + version
+                self.__registry = "quay.io/fedora/fedora"
+        elif product == "centos":
+            self.__registry = "quay.io/centos/centos"
+            if re.match(r"\d+(\-development)?$", version):
+                self.__version = "stream" + version
         else:
-            raise RuntimeError('Unknown product')
+            raise RuntimeError("Unknown product")
+        if self.is_inside_container():
+            self.__podman = "podman-remote"
+        else:
+            self.__podman = "podman"
+        if not shutil.which(self.__podman):
+            raise RuntimeError(f"{self.__podman} is not installed")
+
+    def is_inside_container(self) -> bool:
+        if Path("/.dockerenv").is_file():
+            return True
+        if Path("/run/.toolboxenv").is_file() or Path("/run/.containerenv").is_file():
+            return True
+        cgroup = Path("/proc/self/cgroup")
+        if cgroup.is_file():
+            try:
+                s = cgroup.read_text(encoding="utf-8")
+                runtimes = [
+                    "docker",
+                    "kubepods",
+                    "containerd",
+                    "lxc",
+                    "libpod",
+                    ".scope/container",
+                ]
+                return any(runtime in s for runtime in runtimes)
+            except IOError:
+                pass
+        return False
 
     def _get_namespace(self) -> str:
         if not self.__target:
-            raise RuntimeError('No target is set')
-        return f'fontquery/{self.__product}/{self.__target}:{self.__version}'
+            raise RuntimeError("No target is set")
+        return f"fontquery/{self.__product}/{self.__target}:{self.__version}"
 
     def _get_fullnamespace(self) -> str:
-        return f'ghcr.io/fedora-i18n/{self._get_namespace()}'
+        return f"ghcr.io/fedora-i18n/{self._get_namespace()}"
 
     @property
     def target(self) -> str:
@@ -93,15 +122,11 @@ class ContainerImage:
     def exists(self, remote=True) -> bool:
         """Whether the image is available or not"""
         if not remote:
-            cmdline = [
-                'buildah', 'images', self._get_fullnamespace()
-            ]
+            cmdline = ["buildah", "images", self._get_fullnamespace()]
         else:
-            cmdline = [
-                'buildah', 'pull', self._get_fullnamespace()
-            ]
+            cmdline = ["buildah", "pull", self._get_fullnamespace()]
         if self.__verbose:
-            print('# ' + ' '.join(cmdline), file=sys.stderr)
+            print("# " + " ".join(cmdline), file=sys.stderr)
         try:
             subprocess.run(cmdline, capture_output=True, check=True)
         except subprocess.CalledProcessError:
@@ -109,10 +134,10 @@ class ContainerImage:
         return True
 
     def pull(self, *args, **kwargs) -> bool:
-        cmdline = ['podman', 'pull', self._get_fullnamespace()]
+        cmdline = ["podman", "pull", self._get_fullnamespace()]
         if self.__verbose:
-            print('# ' + ' '.join(cmdline), file=sys.stderr)
-        if not kwargs.get('try_run', False):
+            print("# " + " ".join(cmdline), file=sys.stderr)
+        if not kwargs.get("try_run", False):
             ret = subprocess.run(cmdline, capture_output=True, check=False)
             return ret.returncode == 0
         return True
@@ -121,40 +146,49 @@ class ContainerImage:
         """Build an image"""
         retval = True
         if self.exists(remote=False):
-            print(f'Warning: {self._get_namespace()} is already'
-                  ' available on local. '
-                  'You may want to remove older images manually.',
-                  file=sys.stderr)
+            print(
+                f"Warning: {self._get_namespace()} is already"
+                " available on local. "
+                "You may want to remove older images manually.",
+                file=sys.stderr,
+            )
         with tempfile.TemporaryDirectory() as tmpdir:
-            abssetup = FQ_SCRIPT_PATH.joinpath('fontquery-setup.sh')
+            abssetup = FQ_SCRIPT_PATH.joinpath("fontquery-setup.sh")
             setup = str(abssetup.name)
             devpath = Path(__file__).parents[1]
-            dist = ''
-            containerfile = str(FQ_DATA_PATH.joinpath('Containerfile'))
+            dist = ""
+            containerfile = str(FQ_DATA_PATH.joinpath("Containerfile"))
 
-            if kwargs.get('debug', False):
+            if kwargs.get("debug", False):
                 # Use all files from development
-                sdist = str(devpath / 'dist' / f'fontquery-{FQ_VERSION}*.whl')
+                sdist = str(devpath / "dist" / f"fontquery-{FQ_VERSION}*.whl")
                 dist = glob.glob(sdist)[0]
-                containerfile = str(devpath / 'fontquery' / 'data' /
-                                    'Containerfile')
-                abssetup = str(devpath / 'fontquery' / 'scripts' /
-                               'fontquery-setup.sh')
+                containerfile = str(devpath / "fontquery" / "data" / "Containerfile")
+                abssetup = str(devpath / "fontquery" / "scripts" / "fontquery-setup.sh")
                 shutil.copy2(dist, tmpdir)
             shutil.copy2(abssetup, tmpdir)
             cmdline = [
-                'buildah', 'build', '-f', containerfile,
-                '--build-arg', f'registry={self.__registry}',
-                '--build-arg', f'release={self.__version}',
-                '--build-arg', f'setup={setup}',
-                '--build-arg', f'dist={Path(dist).name}',
-                '--target', self.target, '-t',
-                f'ghcr.io/fedora-i18n/{self._get_namespace()}',
-                tmpdir
+                "buildah",
+                "build",
+                "-f",
+                containerfile,
+                "--build-arg",
+                f"registry={self.__registry}",
+                "--build-arg",
+                f"release={self.__version}",
+                "--build-arg",
+                f"setup={setup}",
+                "--build-arg",
+                f"dist={Path(dist).name}",
+                "--target",
+                self.target,
+                "-t",
+                f"ghcr.io/fedora-i18n/{self._get_namespace()}",
+                tmpdir,
             ]
             if self.__verbose:
-                print('# ' + ' '.join(cmdline))
-            if not kwargs.get('try_run', False):
+                print("# " + " ".join(cmdline))
+            if not kwargs.get("try_run", False):
                 ret = subprocess.run(cmdline, cwd=tmpdir, check=False)
                 retval = ret.returncode == 0
         return retval
@@ -162,58 +196,53 @@ class ContainerImage:
     def clean(self, *args, **kwargs) -> None:
         """Clean up an image"""
         if not self.exists(remote=False):
-            print(f"Warning: {self._get_namespace()} isn't available on local."
-                  " You don't need to clean up.",
-                  file=sys.stderr)
+            print(
+                f"Warning: {self._get_namespace()} isn't available on local."
+                " You don't need to clean up.",
+                file=sys.stderr,
+            )
             return
-        cmdline = [
-            'buildah', 'rmi',
-            f'ghcr.io/fedora-i18n/{self._get_namespace()}'
-        ]
+        cmdline = ["buildah", "rmi", f"ghcr.io/fedora-i18n/{self._get_namespace()}"]
         if self.__verbose:
-            print('# ' + ' '.join(cmdline))
-        if not kwargs.get('try_run', False):
+            print("# " + " ".join(cmdline))
+        if not kwargs.get("try_run", False):
             subprocess.run(cmdline, check=False)
 
     def push(self, *args, **kwargs) -> bool:
         """Publish an image to registry"""
         if not self.exists(remote=False):
-            print(f"Warning: {self._get_namespace()} isn't"
-                  " available on local.")
+            print(f"Warning: {self._get_namespace()} isn't" " available on local.")
             return False
-        cmdline = [
-            'buildah', 'push',
-            f'ghcr.io/fedora-i18n/{self._get_namespace()}'
-        ]
+        cmdline = ["buildah", "push", f"ghcr.io/fedora-i18n/{self._get_namespace()}"]
         if self.__verbose:
-            print('# ' + ' '.join(cmdline))
-        if not kwargs.get('try_run', False):
+            print("# " + " ".join(cmdline))
+        if not kwargs.get("try_run", False):
             ret = subprocess.run(cmdline, check=False)
             return ret.returncode == 0
         return True
 
     @contextlib.contextmanager
-    def _create(self, endpoint_args=[], interactive=False, *args, **kwargs) -> Iterator[str]:
+    def _create(
+        self, endpoint_args=[], interactive=False, *args, **kwargs
+    ) -> Iterator[str]:
         """Create a container"""
         if not self.exists(remote=True):
-            raise RuntimeError("Image isn't yet available. "
-                               f"try build first: {self._get_namespace()}")
+            raise RuntimeError(
+                "Image isn't yet available. "
+                f"try build first: {self._get_namespace()}"
+            )
         if endpoint_args is None:
             endpoint_args = []
-        cname = f'fontquery-{os.getpid()}'
-        cmdline = [
-            'podman', 'create', '-i', '--name', cname
-        ]
+        cname = f"fontquery-{os.getpid()}"
+        cmdline = ["podman", "create", "-i", "--name", cname]
         if interactive:
-            cmdline += ['--entrypoint', '/bin/bash']
+            cmdline += ["--entrypoint", "/bin/bash"]
         cmdline += [self._get_fullnamespace()]
         cmdline += endpoint_args
-        cleancmdline = [
-            'podman', 'rm', '-f', cname
-        ]
+        cleancmdline = ["podman", "rm", "-f", cname]
         if self.__verbose:
-            print('# ' + ' '.join(cmdline))
-        if not kwargs.get('try_run', False):
+            print("# " + " ".join(cmdline))
+        if not kwargs.get("try_run", False):
             cname_created = None
             try:
                 res = subprocess.run(cmdline, capture_output=True, check=False)
@@ -221,90 +250,105 @@ class ContainerImage:
                     cname_created = cname
                     yield cname
                 else:
-                    raise RuntimeError(f'Failed to create container: {res.stderr.decode("utf-8")}')
+                    raise RuntimeError(
+                        f'Failed to create container: {res.stderr.decode("utf-8")}'
+                    )
             except (subprocess.SubprocessError, OSError) as e:
-                raise RuntimeError(f'Container creation failed: {e}') from e
+                raise RuntimeError(f"Container creation failed: {e}") from e
             finally:
                 # Only cleanup if container was created
                 if cname_created:
                     if self.__verbose:
-                        print('# ' + ' '.join(cleancmdline))
+                        print("# " + " ".join(cleancmdline))
                     subprocess.run(cleancmdline, capture_output=True, check=False)
 
-    def _start(self, session='', *args, **kwargs) -> subprocess.CompletedProcess[str]:
+    def _start(self, session="", *args, **kwargs) -> subprocess.CompletedProcess[str]:
         """Start a container"""
-        cmdline = ['podman', 'start', '-a', session]
+        cmdline = ["podman", "start", "-a", session]
         if self.__verbose:
-            print('# ' + ' '.join(cmdline))
-        res = subprocess.run(cmdline, stdout=subprocess.PIPE,
-                             check=False)
+            print("# " + " ".join(cmdline))
+        res = subprocess.run(cmdline, stdout=subprocess.PIPE, check=False)
         return res
 
-    def _exec(self, session='', cmd='/bin/bash', stderr=None, *args, **kwargs) -> subprocess.CompletedProcess[str]:
+    def _exec(
+        self, session="", cmd="/bin/bash", stderr=None, *args, **kwargs
+    ) -> subprocess.CompletedProcess[str]:
         """Execute in a container"""
         # Start container first (output suppressed)
-        subprocess.run(['podman', 'start', session], stdout=subprocess.DEVNULL,
-                       check=False)
+        subprocess.run(
+            ["podman", "start", session], stdout=subprocess.DEVNULL, check=False
+        )
         # Execute command in container
-        cmdline = ['podman', 'exec', '-i', session] + (cmd.split() if isinstance(cmd, str) else cmd)
+        cmdline = ["podman", "exec", "-i", session] + (
+            cmd.split() if isinstance(cmd, str) else cmd
+        )
         if self.__verbose:
-            print('# ' + ' '.join(cmdline), file=sys.stderr)
-        return subprocess.run(cmdline, stdout=subprocess.PIPE, stderr=stderr,
-                              check=False)
+            print("# " + " ".join(cmdline), file=sys.stderr)
+        return subprocess.run(
+            cmdline, stdout=subprocess.PIPE, stderr=stderr, check=False
+        )
 
-    def _commit(self, session='', *args, **kwargs) -> None:
+    def _commit(self, session="", *args, **kwargs) -> None:
         """Commit changes in container"""
-        cmdline = [
-            'podman', 'commit', session,
-            self._get_fullnamespace()
-        ]
+        cmdline = ["podman", "commit", session, self._get_fullnamespace()]
         if self.__verbose:
-            print('# ' + ' '.join(cmdline))
-        if not kwargs.get('try_run', False):
+            print("# " + " ".join(cmdline))
+        if not kwargs.get("try_run", False):
             res = subprocess.run(cmdline, check=False)
             if res.returncode == 0:
-                print('** Image has been changed.', file=sys.stderr)
+                print("** Image has been changed.", file=sys.stderr)
             else:
-                print('** Failed to change image.', file=sys.stderr)
+                print("** Failed to change image.", file=sys.stderr)
 
-    def _copy(self, session='', files=[]) -> bool:
+    def _copy(self, session="", files=[]) -> bool:
         """Copy files into container"""
-        res = subprocess.run(['podman', 'unshare', 'podman', 'mount', session],
-                             capture_output=True, check=False)
+        res = subprocess.run(
+            ["podman", "unshare", "podman", "mount", session],
+            capture_output=True,
+            check=False,
+        )
         if res.returncode != 0:
-            print('** Unable to get a working container\'s directory',
-                  file=sys.stderr)
+            print("** Unable to get a working container's directory", file=sys.stderr)
             return False
-        mnt = res.stdout.decode('utf-8').rstrip('\r\n')
+        mnt = res.stdout.decode("utf-8").rstrip("\r\n")
         try:
-            cmdline = ['podman', 'unshare', 'cp', '-a'] + files + \
-                      [str(Path(mnt) / 'var' / 'tmp' / 'fontquery')]
+            cmdline = (
+                ["podman", "unshare", "cp", "-a"]
+                + files
+                + [str(Path(mnt) / "var" / "tmp" / "fontquery")]
+            )
             if self.__verbose:
-                print('# ' + ' '.join(cmdline), file=sys.stderr)
+                print("# " + " ".join(cmdline), file=sys.stderr)
             res = subprocess.run(cmdline, capture_output=True, check=False)
             if res.returncode != 0:
-                print('** Unable to copy files into a container',
-                      file=sys.stderr)
+                print("** Unable to copy files into a container", file=sys.stderr)
                 return False
         finally:
-            subprocess.run(['podman', 'unshare', 'podman', 'umount', session],
-                           capture_output=True, check=False)
+            subprocess.run(
+                ["podman", "unshare", "podman", "umount", session],
+                capture_output=True,
+                check=False,
+            )
         return True
 
     def update(self, *args, **kwargs) -> bool:
         """Update an image"""
         if not self.exists(remote=True):
-            raise RuntimeError("Image isn't yet available. "
-                               f"try build first: {self._get_namespace()}")
-        with self._create(endpoint_args=['-m', 'checkupdate'], *args, **kwargs) as cname:
+            raise RuntimeError(
+                "Image isn't yet available. "
+                f"try build first: {self._get_namespace()}"
+            )
+        with self._create(
+            endpoint_args=["-m", "checkupdate"], *args, **kwargs
+        ) as cname:
             res = self._start(session=cname)
             if res.returncode == 0:
                 return False
-        if not kwargs.get('try_run', False):
-            with self._create(endpoint_args=['-m', 'update'], *args, **kwargs) as cname:
+        if not kwargs.get("try_run", False):
+            with self._create(endpoint_args=["-m", "update"], *args, **kwargs) as cname:
                 res = self._start(session=cname)
                 if res.returncode != 0:
-                    print('** Updating image failed.', file=sys.stderr)
+                    print("** Updating image failed.", file=sys.stderr)
                     return False
 
                 self._commit(cname)
@@ -314,49 +358,59 @@ class ContainerImage:
     def get_json(self, *args, **kwargs) -> str:
         """Get JSON from a container"""
         if not self.exists(remote=True):
-            raise RuntimeError("Image isn't yet available. "
-                               f"try build first: {self._get_namespace()}")
-        eargs = ['-m', 'json']
-        eargs += utils.build_lang_flags(kwargs['lang'])
-        eargs += utils.build_verbose_flags(kwargs['verbose'] if 'verbose' in kwargs else 0)
-        if 'extra_args' in kwargs and kwargs['extra_args']:
-            eargs += kwargs['extra_args']
+            raise RuntimeError(
+                "Image isn't yet available. "
+                f"try build first: {self._get_namespace()}"
+            )
+        eargs = ["-m", "json"]
+        eargs += utils.build_lang_flags(kwargs["lang"])
+        eargs += utils.build_verbose_flags(
+            kwargs["verbose"] if "verbose" in kwargs else 0
+        )
+        if "extra_args" in kwargs and kwargs["extra_args"]:
+            eargs += kwargs["extra_args"]
         with self._create(endpoint_args=eargs, *args, **kwargs) as cname:
             res = self._start(session=cname)
             if res.returncode != 0:
                 sys.tracebacklimit = 0
-                raise RuntimeError('`podman run\' failed with '
-                                   f'the error code {res.returncode}')
-            return res.stdout.decode('utf-8')
+                raise RuntimeError(
+                    "`podman run' failed with " f"the error code {res.returncode}"
+                )
+            return res.stdout.decode("utf-8")
 
     def get_json_after_install(self, package, *args, **kwargs) -> str:
         """Get JSON from a container after installing a package"""
         if not self.exists(remote=True):
-            raise RuntimeError("Image isn't yet available. "
-                               f"try build first: {self._get_namespace()}")
-        eargs = ['-m', 'json']
-        eargs += utils.build_lang_flags(kwargs['lang'])
-        eargs += utils.build_verbose_flags(kwargs['verbose'] if 'verbose' in kwargs else 0)
-        if 'extra_args' in kwargs and kwargs['extra_args']:
-            eargs += kwargs['extra_args']
+            raise RuntimeError(
+                "Image isn't yet available. "
+                f"try build first: {self._get_namespace()}"
+            )
+        eargs = ["-m", "json"]
+        eargs += utils.build_lang_flags(kwargs["lang"])
+        eargs += utils.build_verbose_flags(
+            kwargs["verbose"] if "verbose" in kwargs else 0
+        )
+        if "extra_args" in kwargs and kwargs["extra_args"]:
+            eargs += kwargs["extra_args"]
 
         with self._create(interactive=True, *args, **kwargs) as cname:
-            print('* Copying packages...', file=sys.stderr)
+            print("* Copying packages...", file=sys.stderr)
             if not self._copy(cname, package):
                 return None
-            print('* Installing packages...', file=sys.stderr)
-            pkgs = ' '.join([Path(f).name for f in package])
-            res = self._exec(session=cname,
-                             stderr=subprocess.PIPE,
-                             cmd='/usr/local/bin/fontquery-client '
-                             f'-m install {pkgs}')
+            print("* Installing packages...", file=sys.stderr)
+            pkgs = " ".join([Path(f).name for f in package])
+            res = self._exec(
+                session=cname,
+                stderr=subprocess.PIPE,
+                cmd="/usr/local/bin/fontquery-client " f"-m install {pkgs}",
+            )
             if res.returncode != 0:
-                print('** Unable to install package', file=sys.stderr)
+                print("** Unable to install package", file=sys.stderr)
                 return None
-            res = self._exec(session=cname,
-                             cmd='/usr/local/bin/fontquery-client ' +
-                             ' '.join(eargs))
+            res = self._exec(
+                session=cname, cmd="/usr/local/bin/fontquery-client " + " ".join(eargs)
+            )
             if res.returncode != 0:
-                print('** Unable to get a JSON', file=sys.stderr)
+                print("** Unable to get a JSON", file=sys.stderr)
                 return None
-            return res.stdout.decode('utf-8')
+            return res.stdout.decode("utf-8")
