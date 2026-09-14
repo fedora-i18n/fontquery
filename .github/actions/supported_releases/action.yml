@@ -16,7 +16,7 @@ runs:
       id: fedora
       run: |
         (echo -n "supported_releases=["
-        for i in eln rawhide $(curl https://dl.fedoraproject.org/pub/fedora/imagelist-fedora | grep -E '(releases|development)/[0-9]+' | sed -e 's,.*/\([0-9]*\)/.*,\1,g' | sort | uniq | tr "\n" " "); do
+        for i in eln rawhide $(curl https://dl.fedoraproject.org/pub/fedora/imagelist-fedora | grep -E '(releases|development)/[0-9]+' | sed -E 's,.*/([0-9]+[^/]*)/.*,\1,g' | grep -v Beta | sort | uniq | tr "\n" " "); do
           echo -n "\"$i\","
         done
         echo "]") | sed -e 's/,]/]/' >> $GITHUB_OUTPUT
