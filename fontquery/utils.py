@@ -9,12 +9,47 @@ import re
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 from typing import List, Optional
 
 try:
     from fontquery import client  # noqa: F401
 except ModuleNotFoundError:
     client = None
+
+
+def is_inside_container() -> bool:
+    """Detect whether we are running inside a container."""
+    if Path('/.dockerenv').is_file():
+        return True
+    if Path('/run/.toolboxenv').is_file() or Path('/run/.containerenv').is_file():
+        return True
+    cgroup = Path('/proc/self/cgroup')
+    if cgroup.is_file():
+        try:
+            s = cgroup.read_text(encoding='utf-8')
+            runtimes = [
+                'docker',
+                'kubepods',
+                'containerd',
+                'lxc',
+                'libpod',
+                '.scope/container',
+            ]
+            return any(runtime in s for runtime in runtimes)
+        except IOError:
+            pass
+    return False
+
+
+def get_podman_command() -> str:
+    """Return the podman command to use.
+
+    Inside a container plain ``podman`` doesn't work and each invocation
+    leaks an orphaned ``catatonit -P`` pause process, so use
+    ``podman-remote`` instead.
+    """
+    return 'podman-remote' if is_inside_container() else 'podman'
 
 
 def normalize_release(release: str, product: str) -> str:
@@ -73,7 +108,7 @@ def run_container_query(release: str, args: argparse.Namespace, mode: str,
         cmdline = ['python', fqcexec, '-m', mode]
     else:
         cmdline = [
-            'podman', 'run', '--rm',
+            get_podman_command(), 'run', '--rm',
             f'ghcr.io/fedora-i18n/fontquery/{args.product}/{args.target}:{release}',
             '-m', mode
         ]

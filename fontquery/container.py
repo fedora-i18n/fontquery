@@ -74,34 +74,12 @@ class ContainerImage:
                 self.__version = "stream" + version
         else:
             raise RuntimeError("Unknown product")
-        if self.is_inside_container():
-            self.__podman = "podman-remote"
-        else:
-            self.__podman = "podman"
+        self.__podman = utils.get_podman_command()
         if not shutil.which(self.__podman):
             raise RuntimeError(f"{self.__podman} is not installed")
 
     def is_inside_container(self) -> bool:
-        if Path("/.dockerenv").is_file():
-            return True
-        if Path("/run/.toolboxenv").is_file() or Path("/run/.containerenv").is_file():
-            return True
-        cgroup = Path("/proc/self/cgroup")
-        if cgroup.is_file():
-            try:
-                s = cgroup.read_text(encoding="utf-8")
-                runtimes = [
-                    "docker",
-                    "kubepods",
-                    "containerd",
-                    "lxc",
-                    "libpod",
-                    ".scope/container",
-                ]
-                return any(runtime in s for runtime in runtimes)
-            except IOError:
-                pass
-        return False
+        return utils.is_inside_container()
 
     def _get_namespace(self) -> str:
         if not self.__target:
@@ -134,7 +112,7 @@ class ContainerImage:
         return True
 
     def pull(self, *args, **kwargs) -> bool:
-        cmdline = ["podman", "pull", self._get_fullnamespace()]
+        cmdline = [self.__podman, "pull", self._get_fullnamespace()]
         if self.__verbose:
             print("# " + " ".join(cmdline), file=sys.stderr)
         if not kwargs.get("try_run", False):
@@ -234,12 +212,12 @@ class ContainerImage:
         if endpoint_args is None:
             endpoint_args = []
         cname = f"fontquery-{os.getpid()}"
-        cmdline = ["podman", "create", "-i", "--name", cname]
+        cmdline = [self.__podman, "create", "-i", "--name", cname]
         if interactive:
             cmdline += ["--entrypoint", "/bin/bash"]
         cmdline += [self._get_fullnamespace()]
         cmdline += endpoint_args
-        cleancmdline = ["podman", "rm", "-f", cname]
+        cleancmdline = [self.__podman, "rm", "-f", cname]
         if self.__verbose:
             print("# " + " ".join(cmdline))
         if not kwargs.get("try_run", False):
@@ -264,7 +242,7 @@ class ContainerImage:
 
     def _start(self, session="", *args, **kwargs) -> subprocess.CompletedProcess[str]:
         """Start a container"""
-        cmdline = ["podman", "start", "-a", session]
+        cmdline = [self.__podman, "start", "-a", session]
         if self.__verbose:
             print("# " + " ".join(cmdline))
         res = subprocess.run(cmdline, stdout=subprocess.PIPE, check=False)
@@ -276,10 +254,10 @@ class ContainerImage:
         """Execute in a container"""
         # Start container first (output suppressed)
         subprocess.run(
-            ["podman", "start", session], stdout=subprocess.DEVNULL, check=False
+            [self.__podman, "start", session], stdout=subprocess.DEVNULL, check=False
         )
         # Execute command in container
-        cmdline = ["podman", "exec", "-i", session] + (
+        cmdline = [self.__podman, "exec", "-i", session] + (
             cmd.split() if isinstance(cmd, str) else cmd
         )
         if self.__verbose:
@@ -290,7 +268,7 @@ class ContainerImage:
 
     def _commit(self, session="", *args, **kwargs) -> None:
         """Commit changes in container"""
-        cmdline = ["podman", "commit", session, self._get_fullnamespace()]
+        cmdline = [self.__podman, "commit", session, self._get_fullnamespace()]
         if self.__verbose:
             print("# " + " ".join(cmdline))
         if not kwargs.get("try_run", False):

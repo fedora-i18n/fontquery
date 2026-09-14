@@ -204,7 +204,7 @@ def main():
             warnings.warn("target option won't take any effects on local mode",
                           RuntimeWarning, stacklevel=2)
     else:
-        if not shutil.which('podman'):
+        if not shutil.which(utils.get_podman_command()):
             print('podman is not installed')
             sys.exit(1)
 

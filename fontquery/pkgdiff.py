@@ -14,6 +14,7 @@ try:
 except ModuleNotFoundError:
     pass
 from fontquery import htmlformatter  # noqa: F401
+from fontquery import utils  # noqa: F401
 from fontquery.cache import FontQueryCache  # noqa: F401
 from fontquery.container import ContainerImage  # noqa: F401
 
@@ -119,7 +120,7 @@ def main():
     if args.version:
         print(importlib.metadata.version('fontquery'))
         sys.exit(0)
-    if not shutil.which('podman'):
+    if not shutil.which(utils.get_podman_command()):
         print('podman is not installed', file=sys.stderr)
         sys.exit(1)
 

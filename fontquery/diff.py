@@ -150,7 +150,7 @@ def main():
         sys.exit(0)
     if LOCAL_NOT_SUPPORTED:
         raise TypeError('local query feature is not available.')
-    if not shutil.which('podman'):
+    if not shutil.which(utils.get_podman_command()):
         print('podman is not installed', file=sys.stderr)
         sys.exit(1)
 

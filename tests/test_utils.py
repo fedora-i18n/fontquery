@@ -3,6 +3,7 @@
 
 """Tests for utils module."""
 
+import argparse
 import pytest
 from unittest.mock import MagicMock, patch
 from fontquery.utils import (
@@ -10,6 +11,9 @@ from fontquery.utils import (
     build_verbose_flags,
     build_lang_flags,
     get_fontquery_client_path,
+    is_inside_container,
+    get_podman_command,
+    run_container_query,
 )
 
 
@@ -104,3 +108,60 @@ class TestGetFontqueryClientPath:
             with patch('fontquery.utils.client', None):
                 with pytest.raises(RuntimeError, match='fontquery-client not found'):
                     get_fontquery_client_path()
+
+
+class TestIsInsideContainer:
+    """Tests for is_inside_container function."""
+
+    def test_dockerenv_present(self):
+        """Test detection via /.dockerenv."""
+        with patch('fontquery.utils.Path.is_file', lambda self: True):
+            assert is_inside_container() is True
+
+    def test_cgroup_libpod(self):
+        """Test detection via cgroup runtime marker."""
+        def fake_is_file(self):
+            return str(self) == '/proc/self/cgroup'
+
+        with patch('fontquery.utils.Path.is_file', fake_is_file), \
+                patch('fontquery.utils.Path.read_text',
+                      lambda self, encoding=None: '0::/libpod-abc.scope'):
+            assert is_inside_container() is True
+
+    def test_not_in_container(self):
+        """Test returns False when no markers are present."""
+        with patch('fontquery.utils.Path.is_file', lambda self: False):
+            assert is_inside_container() is False
+
+
+class TestGetPodmanCommand:
+    """Tests for get_podman_command function."""
+
+    def test_inside_container(self):
+        """Test returns podman-remote inside a container."""
+        with patch('fontquery.utils.is_inside_container', return_value=True):
+            assert get_podman_command() == 'podman-remote'
+
+    def test_outside_container(self):
+        """Test returns podman outside a container."""
+        with patch('fontquery.utils.is_inside_container', return_value=False):
+            assert get_podman_command() == 'podman'
+
+
+class TestRunContainerQuery:
+    """Tests for run_container_query function."""
+
+    def test_uses_podman_remote_inside_container(self):
+        """Test the query command uses the resolved podman command."""
+        args = argparse.Namespace(product='fedora', target='minimal',
+                                  verbose=0, lang=None)
+        completed = MagicMock(returncode=0, stdout=b'output')
+        with patch('fontquery.utils.get_podman_command',
+                   return_value='podman-remote'), \
+                patch('fontquery.utils.subprocess.run',
+                      return_value=completed) as mock_run:
+            out = run_container_query('rawhide', args, 'json')
+
+        assert out == 'output'
+        cmdline = mock_run.call_args[0][0]
+        assert cmdline[:3] == ['podman-remote', 'run', '--rm']

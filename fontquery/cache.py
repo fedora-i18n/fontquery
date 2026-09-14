@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 from xdg import BaseDirectory
+from fontquery import utils  # noqa: F401
 
 
 class FontQueryCache:
@@ -30,8 +31,8 @@ class FontQueryCache:
 
     def _get_current_revision(self) -> str:
         res = subprocess.run(
-            ['podman', 'images', '-a', '--no-trunc', '--format', '{{.ID}}',
-             self._repo],
+            [utils.get_podman_command(), 'images', '-a', '--no-trunc',
+             '--format', '{{.ID}}', self._repo],
             capture_output=True, check=False)
         if res.returncode != 0:
             sys.tracebacklimit = 0
